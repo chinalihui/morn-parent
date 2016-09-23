@@ -27,7 +27,7 @@ public class AllInfoAction {
 	@Req("/all")
 	public @Json Map<String, String> all(){
 		Map<String, String> model = new HashMap<String, String>();
-		model.put("A", "xxxxxxx");
+		model.put("A", "xxxxxxx123");
 		return model;
 	}
 	
