@@ -15,12 +15,18 @@ package org.mornframework.webmvc.handler;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
-import org.mornframework.webmvc.annotation.Json;
+import org.mornframework.context.beans.factory.AbstractFactoryBean;
+import org.mornframework.context.util.ClassUtil;
+import org.mornframework.context.util.StringUtils;
+import org.mornframework.webmvc.annotation.ResponseJson;
 import org.mornframework.webmvc.output.JsonOutput;
 import org.mornframework.webmvc.output.ModelAndViewOutput;
 import org.mornframework.webmvc.output.ViewOrUrlOutput;
@@ -35,13 +41,13 @@ import org.slf4j.LoggerFactory;
  */
 public class ActionHandler extends Handler{
 	
-	private Map<String, Object> actionMap;
 	private Map<String,ReqMapping> reqMappingMaps;
+	protected AbstractFactoryBean factoryBean;
 	protected final Logger LOG = LoggerFactory.getLogger(getClass());
 	
-	public ActionHandler(Map<String, Object> actionMap,
+	public ActionHandler(AbstractFactoryBean factoryBean,
 			Map<String,ReqMapping> reqMappingMaps){
-		this.actionMap = actionMap;
+		this.factoryBean = factoryBean;
 		this.reqMappingMaps = reqMappingMaps;
 	}
 	
@@ -51,11 +57,11 @@ public class ActionHandler extends Handler{
 		flag[0] = true;
 		ReqMapping reqMapping = reqMappingMaps.get(uri);
 		
-		Object action = actionMap.get(reqMapping.getActionName());
+		Object action = factoryBean.getBean(reqMapping.getActionName());
 		try {
 			Class<?>[] paramsTypes = reqMapping.getParamsTypes();
-			Method method = action.getClass().getMethod(
-					reqMapping.getMethodName(),paramsTypes);
+			Method method = action.getClass().getMethod(reqMapping.getMethodName(),paramsTypes);
+			
 			try {
 				Object result = null;
 				Object[] args = bindParams(reqMapping,request,response);
@@ -95,24 +101,54 @@ public class ActionHandler extends Handler{
 			return;
 		}
 		
-		if(reqMapping.exsitAnnotation(Json.class)){
+		if(reqMapping.exsitAnnotation(ResponseJson.class)){
 			new JsonOutput(result).setOutput(request, response).output();
 			return;
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	private Object[] bindParams(ReqMapping reqMapping,HttpServletRequest request,
 			HttpServletResponse response){
 		Class<?>[] paramsTypes = reqMapping.getParamsTypes();
 		Object[] args = new Object[paramsTypes.length];
 		String[] paramNames = reqMapping.getParamNames();
 		
+		/**
+		 * 获取含有实体类属性的参数
+		 */
+		Map<String, Map<String, Object>> paramValue = new HashMap<String, Map<String, Object>>();
+		Set<String> paramSet = request.getParameterMap().keySet();
+		if(paramSet != null){
+			for (String paramName : paramSet) {
+				if(StringUtils.isNotEmpty(paramName)){
+					int index = paramName.indexOf(".");
+					if(index > 0){
+						String prefix = paramName.substring(0,index);
+						Map<String, Object> paramHash = paramValue.get(prefix);
+						if(paramHash == null ){
+							paramValue.put(prefix,new HashMap<String, Object>());
+						}
+						paramValue.get(prefix).put(paramName.substring(index+1,paramName.length())
+								, request.getParameter(paramName));
+					}
+				}
+			}
+		}
+		
+		/**
+		 * 循环设置方法类的请求参数
+		 */
 		for(int i = 0;i<paramNames.length;i++){
 			Class<?> paramType = paramsTypes[i];
 			if(paramType == HttpServletRequest.class)
 				args[i] = request;
 			else if(paramType == HttpServletResponse.class)
 				args[i] = response;
+			else if(paramType == HttpSession.class)
+				args[i] = request.getSession();
+			else if(!ClassUtil.isJavaClass(paramType) && paramValue.containsKey(paramNames[i]))
+				args[i] = pushEntityFields(paramValue.get(paramNames[i]),paramType);
 			else{
 				String value = request.getParameter(paramNames[i]);
 				if(value == null){
@@ -145,6 +181,38 @@ public class ActionHandler extends Handler{
 		return args;
 	}
 	
+	public Object pushEntityFields(Map<String, Object> nameValues,Class<?> clazz){
+		Object object = null;
+		try {
+			object = clazz.newInstance();
+			for(Map.Entry<String, Object> nameValue : nameValues.entrySet()){
+				String fieldName = nameValue.getKey();
+				try {
+					Method method = clazz.getMethod("set"+StringUtils.firstToUpperCase(fieldName)
+							,clazz.getDeclaredField(fieldName).getType());
+					try {
+						method.invoke(object, nameValue.getValue());
+					} catch (IllegalArgumentException e) {
+						e.printStackTrace();
+					} catch (InvocationTargetException e) {
+						e.printStackTrace();
+					}
+				} catch (NoSuchMethodException e) {
+					e.printStackTrace();
+				} catch (SecurityException e) {
+					e.printStackTrace();
+				} catch (NoSuchFieldException e) {
+					e.printStackTrace();
+				}
+			}
+		} catch (InstantiationException e) {
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		}
+		return object;
+	}
+	
 	public Object defaultValue(Class<?> type){
 		if(type == int.class || type == byte.class || type == short.class){
 			return 0;
@@ -165,7 +233,7 @@ public class ActionHandler extends Handler{
 
 	@Override
 	public Object getAction(String actionName) {
-		return actionMap.get(actionName);
+		return factoryBean.getBean(actionName);
 	}
 
 }

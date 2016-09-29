@@ -10,18 +10,18 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.mornframework.webmvc.annotation.Action;
-import org.mornframework.webmvc.annotation.Json;
-import org.mornframework.webmvc.annotation.Req;
+import org.mornframework.context.annotation.Action;
+import org.mornframework.webmvc.annotation.ResponseJson;
+import org.mornframework.webmvc.annotation.RequestRoute;
 import org.mornframework.webmvc.support.ModelAndView;
 
 import com.morn.testweb.domain.User;
 
 @Action
-@Req("/login")
+@RequestRoute("/login")
 public class LoginAction{
 
-	@Req("/hello")
+	@RequestRoute("/hello")
 	public String hello(String username,String password,HttpServletRequest request,int age){
 		System.out.println("LoginAction.hello()" + new Timestamp(System.currentTimeMillis()));
 		System.out.println("username:"+username+"\t password:"+password + "\t age:"+age);
@@ -29,7 +29,7 @@ public class LoginAction{
 		return "ok.jsp";
 	}
 	
-	@Req("/open")
+	@RequestRoute("/open")
 	public void open(HttpServletResponse response,String text,int ms){
 		System.out.println(this + "\t" + Thread.currentThread().getName());
 		try {
@@ -48,14 +48,14 @@ public class LoginAction{
 		}
 	}
 	
-	@Req("/say")
+	@RequestRoute("/say")
 	public String say(String text){
 		System.out.println("text:"+text);
 		return "redirect:hello";
 	}
 	
-	@Req("/sayJson")
-	public @Json Map<String, Object> sayJson(){
+	@RequestRoute("/sayJson")
+	public @ResponseJson Map<String, Object> sayJson(){
 		Map<String, Object> map = new HashMap<String, Object>();
 		map.put("name", "Jeff.Li");
 		map.put("address", "ShangHai");
@@ -64,7 +64,7 @@ public class LoginAction{
 		return map;
 	}
 	
-	@Req("/toIndex")
+	@RequestRoute("/toIndex")
 	public ModelAndView toIndex(){
 		Map<String, Object> model = new HashMap<String, Object>();
 		model.put("year", 2016);
@@ -75,6 +75,22 @@ public class LoginAction{
 		user.setAddress("ShangHai");
 		user.setAge(10);
 		return new ModelAndView("info.jsp", model).addObject("user", user);
+	}
+	
+	@RequestRoute("/ajaxReq")
+	@ResponseJson
+	public Map<String, Object> ajaxReq(HttpServletRequest request, String username){
+		System.out.println("username:"+username);
+		Map<String, Object> model = new HashMap<String, Object>();
+		model.put("result", "success:"+username);
+		return model;
+	}
+	
+	@RequestRoute("/submitForm")
+	public String submitForm(HttpServletRequest request,User user,String flag){
+		System.out.println(user);
+		System.out.println(flag);
+		return "ok.jsp";
 	}
 	
 }

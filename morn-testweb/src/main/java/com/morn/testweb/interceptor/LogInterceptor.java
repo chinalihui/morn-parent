@@ -17,7 +17,7 @@ package com.morn.testweb.interceptor;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.mornframework.webmvc.annotation.Interceptor;
+import org.mornframework.context.annotation.Interceptor;
 import org.mornframework.webmvc.interceptor.ActionInterceptor;
 
 @Interceptor(order=0,path="/**")
@@ -25,18 +25,15 @@ public class LogInterceptor implements ActionInterceptor{
 
 	public boolean beforeAction(HttpServletRequest request,
 			HttpServletResponse response, Object action) {
-		System.out.println("LogInterceptor.beforeAction() URL:"+request.getRequestURI());
 		return true;
 	}
 
 	public void afterAction(HttpServletRequest request,
 			HttpServletResponse response, Object action, Object result) {
-		System.out.println("LogInterceptor.afterAction() URL:" + request.getRequestURI());
 	}
 
 	public void completionAction(HttpServletRequest request,
 			HttpServletResponse response, Object action, Exception e) {
-		System.out.println("LogInterceptor.completionAction()");
 	}
 
 }

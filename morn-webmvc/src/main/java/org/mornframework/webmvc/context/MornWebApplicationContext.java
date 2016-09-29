@@ -33,16 +33,17 @@ import javassist.bytecode.MethodInfo;
 
 import javax.servlet.ServletContext;
 
-import org.mornframework.webmvc.annotation.Action;
-import org.mornframework.webmvc.annotation.Interceptor;
-import org.mornframework.webmvc.annotation.Req;
+import org.mornframework.context.annotation.Action;
+import org.mornframework.context.annotation.Interceptor;
+import org.mornframework.context.beans.factory.AbstractFactoryBean;
+import org.mornframework.context.beans.factory.ContextFactoryBean;
+import org.mornframework.context.util.StringUtils;
+import org.mornframework.webmvc.annotation.RequestRoute;
 import org.mornframework.webmvc.handler.ActionHandler;
 import org.mornframework.webmvc.handler.Handler;
 import org.mornframework.webmvc.interceptor.ActionInterceptor;
 import org.mornframework.webmvc.support.InterceptorChain;
 import org.mornframework.webmvc.support.ReqMapping;
-import org.mornframework.webmvc.util.ClassUtil;
-import org.mornframework.webmvc.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,16 +54,15 @@ import org.slf4j.LoggerFactory;
 public class MornWebApplicationContext implements MornApplication{
 
 	protected final Logger LOG = LoggerFactory.getLogger(getClass());
-	private Map<String,Object> actionMap;
 	private Map<String,ReqMapping> reqMappingMaps;
 	private ServletContext servletContext;
 	private List<InterceptorChain> interceptorChains;
 	private String scanPackage;
 	private List<Class<?>> classList;
 	private Handler handler;
+	private AbstractFactoryBean factoryBean;
 	
 	public MornWebApplicationContext(){
-		actionMap = new LinkedHashMap<String, Object>();
 		reqMappingMaps = new LinkedHashMap<String, ReqMapping>();
 	}
 	
@@ -74,10 +74,10 @@ public class MornWebApplicationContext implements MornApplication{
 		this.servletContext = servletContext;
 		this.scanPackage = scanPackage;
 
-		scanApplicationClass();
+		initFactoryBean();
 		initInterceptor();
 		initWebAction();
-		handler = new ActionHandler(actionMap,reqMappingMaps);
+		handler = new ActionHandler(factoryBean,reqMappingMaps);
 	}
 	
 	private void initWebAction(){
@@ -86,72 +86,60 @@ public class MornWebApplicationContext implements MornApplication{
 			Action action = cl.getAnnotation(Action.class);
 			if(action == null) continue;
 			
-			Object actionObject = null;
+			String actionName = factoryBean.getBeanName(cl);
+			if(LOG.isDebugEnabled()){
+				LOG.debug("Morn Framework put action:" + actionName
+						+ ",actionClass:" + cl);
+			}
+			
+			CtClass cc = null;
+			pool.insertClassPath(new ClassClassPath(cl));
 			try {
-				actionObject = cl.newInstance();
-				String actionName = action.value();
-				if(actionName == null || actionName.length() == 0){
-					actionName = StringUtils.firstToLowerCase(cl.getSimpleName());
-				}
-				actionMap.put(actionName,actionObject);
-				if(LOG.isDebugEnabled()){
-					LOG.debug("Morn Framework put action:" + actionName
-							+ ",actionClass:" + cl);
-				}
-				
-				CtClass cc = null;
-				pool.insertClassPath(new ClassClassPath(cl));
-				try {
-					cc = pool.get(cl.getName());
-				} catch (NotFoundException e1) {
-					e1.printStackTrace();
-				}
-				
-				Req actionReq = cl.getAnnotation(Req.class);
-				String actionUrl = "";
-				if(actionReq != null && StringUtils.isNotEmpty(actionReq.value())){
-					actionUrl = actionReq.value();
-				}
-				
-				Method[] methods = cl.getMethods();
-				for (Method method : methods) {
-					Req req = method.getAnnotation(Req.class);
-					if(req != null){
-						String uri = actionUrl + req.value();
-						try {
-							CtMethod cm = cc.getDeclaredMethod(method.getName());
-							MethodInfo methodInfo = cm.getMethodInfo();  
-				            CodeAttribute codeAttribute = methodInfo.getCodeAttribute();  
-				            LocalVariableAttribute attr = (LocalVariableAttribute) codeAttribute.getAttribute(LocalVariableAttribute.tag);  
-				            if (attr == null) continue;
-				            
-				            String[] paramNames = new String[cm.getParameterTypes().length];
-				            int pos = Modifier.isStatic(cm.getModifiers()) ? 0 : 1;
-				            for (int i = 0; i < paramNames.length; i++)
-				                paramNames[i] = attr.variableName(i + pos);
-				            
-				            reqMappingMaps.put(uri,new ReqMapping(method.getParameterTypes(),
-															  	  method.getReturnType(),
-															      req.value(),
-															      method.getName(),
-															      paramNames,
-															      method.getAnnotations(),
-															      actionName,
-															      getUriInterceptor(uri)
-															      )
-				            );
-				            if(LOG.isInfoEnabled()){
-				            	LOG.info("Application add action url:" + uri + ",mapping actionClass:" + cl);
-				            }
-						} catch (NotFoundException e) {
-							e.printStackTrace();
-						}
+				cc = pool.get(cl.getName());
+			} catch (NotFoundException e1) {
+				e1.printStackTrace();
+			}
+			
+			RequestRoute actionReq = cl.getAnnotation(RequestRoute.class);
+			String actionUrl = "";
+			if(actionReq != null && StringUtils.isNotEmpty(actionReq.value())){
+				actionUrl = actionReq.value();
+			}
+			
+			Method[] methods = cl.getMethods();
+			for (Method method : methods) {
+				RequestRoute req = method.getAnnotation(RequestRoute.class);
+				if(req != null){
+					String uri = actionUrl + req.value();
+					try {
+						CtMethod cm = cc.getDeclaredMethod(method.getName());
+						MethodInfo methodInfo = cm.getMethodInfo();  
+			            CodeAttribute codeAttribute = methodInfo.getCodeAttribute();  
+			            LocalVariableAttribute attr = (LocalVariableAttribute) codeAttribute.getAttribute(LocalVariableAttribute.tag);  
+			            if (attr == null) continue;
+			            
+			            String[] paramNames = new String[cm.getParameterTypes().length];
+			            int pos = Modifier.isStatic(cm.getModifiers()) ? 0 : 1;
+			            for (int i = 0; i < paramNames.length; i++)
+			                paramNames[i] = attr.variableName(i + pos);
+			            
+			            reqMappingMaps.put(uri,new ReqMapping(method.getParameterTypes(),
+														  	  method.getReturnType(),
+														      req.value(),
+														      method.getName(),
+														      paramNames,
+														      method.getAnnotations(),
+														      actionName,
+														      getUriInterceptor(uri)
+														      )
+			            );
+			            if(LOG.isInfoEnabled()){
+			            	LOG.info("Application add action url:" + uri + ",mapping actionClass:" + cl);
+			            }
+					} catch (NotFoundException e) {
+						e.printStackTrace();
 					}
 				}
-			} catch (InstantiationException e) {
-				e.printStackTrace();
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
 			}
 		}
 	}
@@ -177,36 +165,37 @@ public class MornWebApplicationContext implements MornApplication{
 						+ " not implements:" + ActionInterceptor.class);
 			}
 			
-			try {
-				int order = interceptor.order();
-				if(orderMap.containsKey(order)){
-					throw new RuntimeException("Interceptor " + cl 
-							+ " order:" + order +" exist ");
-				}
-				
-				orderMap.put(order, "");
-				String[] path = interceptor.path();
-				if(path == null || path.length == 0){
-					throw new NullPointerException("Interceptor " + cl 
-							+ " @Interceptor path not set. ");
-				}
-				
-				for(String p : path){
-					if(StringUtils.isEmpty(p) || p.indexOf("/**") == -1){
-						throw new NullPointerException("Interceptor " + cl 
-								+ " @Interceptor path is empty or path must include /**");
-					}
-				}
-				
-				ActionInterceptor actionInterceptor = (ActionInterceptor) cl.newInstance();
-				interceptorChains.add(new InterceptorChain(order,path, actionInterceptor));
-			} catch (InstantiationException e) {
-				e.printStackTrace();
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
+			int order = interceptor.order();
+			if(orderMap.containsKey(order)){
+				throw new RuntimeException("Interceptor " + cl 
+						+ " order:" + order +" exist ");
 			}
+			
+			orderMap.put(order, "");
+			String[] path = interceptor.path();
+			if(path == null || path.length == 0){
+				throw new NullPointerException("Interceptor " + cl 
+						+ " @Interceptor path not set. ");
+			}
+			
+			for(String p : path){
+				if(StringUtils.isEmpty(p) || p.indexOf("/**") == -1){
+					throw new NullPointerException("Interceptor " + cl 
+							+ " @Interceptor path is empty or path must include /**");
+				}
+			}
+			
+			String name = factoryBean.getBeanName(cl);
+			ActionInterceptor actionInterceptor = (ActionInterceptor) factoryBean.getBean(name);
+			interceptorChains.add(new InterceptorChain(order,path, actionInterceptor));
 		}
 		Collections.sort(interceptorChains);
+	}
+	
+	public void initFactoryBean(){
+		factoryBean = new ContextFactoryBean(scanPackage);
+		factoryBean.createContextBeans();
+		classList = factoryBean.getAnnotationClasss();
 	}
 	
 	public List<ActionInterceptor> getUriInterceptor(String uri){
@@ -233,23 +222,8 @@ public class MornWebApplicationContext implements MornApplication{
 		return interceptorList;
 	}
 	
-	public void scanApplicationClass(){
-		if(StringUtils.isEmpty(scanPackage)){
-			throw new RuntimeException("Please set scanPackage in "
-					+ " web.xml filter mornMvc init-param ");
-		}
-		
-		String[] packages = scanPackage.split(",");
-		classList = new ArrayList<Class<?>>();
-		for(String pkg : packages){
-			if(pkg != null && pkg.length() > 0)
-				classList.addAll(ClassUtil.getClasses(pkg));
-		}
-	}
-	
 	public void shutdown() {
 		servletContext.log(" web application:" + servletContext.getContextPath() + " shutdown!");
-		actionMap.clear();
 		reqMappingMaps.clear();
 		handler = null;
 		servletContext = null;

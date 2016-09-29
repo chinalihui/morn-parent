@@ -17,17 +17,25 @@ package com.morn.testweb.action;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.mornframework.webmvc.annotation.Action;
-import org.mornframework.webmvc.annotation.Json;
-import org.mornframework.webmvc.annotation.Req;
+import org.mornframework.context.annotation.Action;
+import org.mornframework.context.annotation.Inject;
+import org.mornframework.webmvc.annotation.ResponseJson;
+import org.mornframework.webmvc.annotation.RequestRoute;
+
+import com.morn.testweb.service.IAllService;
 
 @Action
 public class AllInfoAction {
-
-	@Req("/all")
-	public @Json Map<String, String> all(){
+	
+	@Inject
+	private IAllService allService;
+	
+	@RequestRoute("/all")
+	public @ResponseJson Map<String, String> all(String name){
 		Map<String, String> model = new HashMap<String, String>();
-		model.put("A", "xxxxxxx123");
+		System.out.println(allService);
+		String value = allService.search(name);
+		model.put("A", value);
 		return model;
 	}
 	

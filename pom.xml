@@ -10,7 +10,10 @@
 	<modules>
 		<module>morn-webmvc</module>
     	<module>morn-testweb</module>
-  	</modules>
+    <module>morn-core</module>
+    <module>morn-beans</module>
+    <module>morn-context</module>
+  </modules>
   	
   	<properties>
   		<commons-lang>2.4</commons-lang>

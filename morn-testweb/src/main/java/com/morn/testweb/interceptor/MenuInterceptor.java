@@ -17,7 +17,7 @@ package com.morn.testweb.interceptor;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.mornframework.webmvc.annotation.Interceptor;
+import org.mornframework.context.annotation.Interceptor;
 import org.mornframework.webmvc.interceptor.ActionInterceptor;
 
 @Interceptor(order=1,path="/login/**")
@@ -25,19 +25,16 @@ public class MenuInterceptor implements ActionInterceptor{
 
 	public boolean beforeAction(HttpServletRequest request,
 			HttpServletResponse response, Object action) throws Exception {
-		System.out.println("MenuInterceptor.beforeAction() URL:"+request.getRequestURI());
 		return true;
 	}
 
 	public void afterAction(HttpServletRequest request,
 			HttpServletResponse response, Object action, Object result)
 			throws Exception {
-		System.out.println("MenuInterceptor.afterAction() URL:"+request.getRequestURI());
 	}
 
 	public void completionAction(HttpServletRequest request,
 			HttpServletResponse response, Object action, Exception e) {
-		System.out.println("MenuInterceptor.completionAction()");
 		
 	}
 
