@@ -38,6 +38,7 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		scanContextClasss(basePackage);
 		beans = new LinkedHashMap<String, Object>();
 		prototypeClasses = new HashMap<String, Class<?>>();
+		BeanHolder.factoryBean = this;
 	}
 	
 	@Override

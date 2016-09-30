@@ -20,6 +20,7 @@ import java.util.Map;
 import org.mornframework.context.annotation.Action;
 import org.mornframework.context.annotation.Inject;
 import org.mornframework.context.annotation.Scope;
+import org.mornframework.context.beans.factory.BeanHolder;
 import org.mornframework.webmvc.annotation.RequestRoute;
 import org.mornframework.webmvc.annotation.ResponseJson;
 
@@ -35,6 +36,7 @@ public class AllInfoAction {
 	@RequestRoute("/all")
 	public @ResponseJson Map<String, String> all(String name){
 		System.out.println("action:"+this);
+		System.out.println("action:"+BeanHolder.getBean("allInfoAction"));
 		Map<String, String> model = new HashMap<String, String>();
 		System.out.println(allService);
 		String value = allService.search(name);
