@@ -13,7 +13,7 @@
 */
 package org.mornframework.webmvc.context;
 
-import javax.servlet.ServletContext;
+import javax.servlet.FilterConfig;
 
 import org.mornframework.webmvc.handler.Handler;
 
@@ -30,7 +30,7 @@ public interface MornApplication {
 	 * @param servletContext
 	 */
 	public void init(String scanPackage,
-			ServletContext servletContext);
+			FilterConfig filterConfig);
 	
 	/**
 	 * stop server

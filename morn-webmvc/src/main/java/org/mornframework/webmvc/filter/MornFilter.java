@@ -48,8 +48,7 @@ public class MornFilter implements Filter{
 	public void init(FilterConfig filterConfig) throws ServletException {
 		initMornApplication(filterConfig.getInitParameter("applicationInitClass"));
 		
-		mornApplication.init(filterConfig.getInitParameter("scanPackage")
-				,filterConfig.getServletContext());
+		mornApplication.init(filterConfig.getInitParameter("scanPackage"),filterConfig);
 		handler = mornApplication.getHandler();
 		
 		String contextPath = filterConfig.getServletContext().getContextPath();

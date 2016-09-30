@@ -9,13 +9,17 @@
 	<filter>
 		<filter-name>mornMvc</filter-name>
 		<filter-class>org.mornframework.webmvc.filter.MornFilter</filter-class>
-
 		<init-param>
 			<param-name>scanPackage</param-name>
 			<param-value>com.morn</param-value>
 		</init-param>
+		<init-param>
+			<param-name>contextProperties</param-name>
+			<param-value>
+				/application.properties
+			</param-value>
+		</init-param>
 	</filter>
-
 	<filter-mapping>
 		<filter-name>mornMvc</filter-name>
 		<url-pattern>/*</url-pattern>
