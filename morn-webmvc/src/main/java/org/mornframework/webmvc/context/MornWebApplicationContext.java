@@ -189,11 +189,13 @@ public class MornWebApplicationContext implements MornApplication{
 			String name = factoryBean.getBeanName(cl);
 			ActionInterceptor actionInterceptor = (ActionInterceptor) factoryBean.getBean(name);
 			interceptorChains.add(new InterceptorChain(order,path, actionInterceptor));
+			LOG.info("Init Web Application Interceptor -->"+cl);
 		}
 		Collections.sort(interceptorChains);
 	}
 	
 	public void initFactoryBean(){
+		LOG.info("init Web Application Context ");
 		factoryBean = new ContextFactoryBean(scanPackage);
 		factoryBean.createContextBeans();
 		classList = factoryBean.getAnnotationClasss();
