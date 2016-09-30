@@ -130,7 +130,8 @@ public class MornWebApplicationContext implements MornApplication{
 														      paramNames,
 														      method.getAnnotations(),
 														      actionName,
-														      getUriInterceptor(uri)
+														      getUriInterceptor(uri),
+														      req.method()
 														      )
 			            );
 			            if(LOG.isInfoEnabled()){

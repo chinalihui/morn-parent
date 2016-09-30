@@ -27,6 +27,8 @@ import org.mornframework.context.beans.factory.AbstractFactoryBean;
 import org.mornframework.context.util.ClassUtil;
 import org.mornframework.context.util.StringUtils;
 import org.mornframework.webmvc.annotation.ResponseJson;
+import org.mornframework.webmvc.exception.ServletRequestException;
+import org.mornframework.webmvc.output.ErrorOutput;
 import org.mornframework.webmvc.output.JsonOutput;
 import org.mornframework.webmvc.output.ModelAndViewOutput;
 import org.mornframework.webmvc.output.ViewOrUrlOutput;
@@ -54,39 +56,36 @@ public class ActionHandler extends Handler{
 	
 	@Override
 	public Object handle(String uri, HttpServletRequest request,
-			HttpServletResponse response,boolean[] flag) {
+			HttpServletResponse response,boolean[] flag) throws Exception {
 		flag[0] = true;
 		ReqMapping reqMapping = reqMappingMaps.get(uri);
 		
-		Object action = getAction(reqMapping.getActionName());
 		try {
+			boolean isRequestMethod = reqMapping.isRequestMethod(request.getMethod());
+			if(!isRequestMethod)  throw new ServletRequestException("");
+			
+			Object action = getAction(reqMapping.getActionName());
 			Class<?>[] paramsTypes = reqMapping.getParamsTypes();
 			Method method = action.getClass().getMethod(reqMapping.getMethodName(),paramsTypes);
+			Object result = null;
+			Object[] args = bindParams(reqMapping,request,response);
 			
-			try {
-				Object result = null;
-				Object[] args = bindParams(reqMapping,request,response);
-				
-				result = method.invoke(action,args);
-				output(result,request,response,reqMapping);
-				
-				return result;
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
-			} catch (IllegalArgumentException e) {
-				e.printStackTrace();
-			} catch (InvocationTargetException e) {
-				e.printStackTrace();
-			}
-		} catch (NoSuchMethodException e) {
+			result = method.invoke(action,args);
+			output(result,request,response,reqMapping);
+			
+			return result;
+		} catch (ServletRequestException se){
+			LOG.debug("Please check URL:"+uri+", request method [" + request.getMethod() + "]");
+			new ErrorOutput(405, uri).setOutput(request, response).output();
+			throw se;
+		} catch (Exception e) {
 			e.printStackTrace();
-		} catch (SecurityException e) {
-			e.printStackTrace();
+			new ErrorOutput(500, uri ,e).setOutput(request, response).output();
+			throw e;
 		}
 		finally{
 			actionObject.remove();
 		}
-		return null;
 	}
 	
 	public void output(Object result,HttpServletRequest request,

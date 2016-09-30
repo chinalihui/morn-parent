@@ -19,6 +19,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.mornframework.webmvc.support.RequestMethod;
+
 /**
  * @author Jeff.Li
  * @date 2016年9月20日
@@ -28,5 +30,15 @@ import java.lang.annotation.Target;
 @Documented
 public @interface RequestRoute {
 
+	/**
+	 * 请求映射路径(/xxx/yy)
+	 * @return
+	 */
 	String value() default "";
+	
+	/**
+	 * 指定该资源的请求方式
+	 * @return
+	 */
+	RequestMethod[] method() default {};
 }

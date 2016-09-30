@@ -14,6 +14,7 @@ import org.mornframework.context.annotation.Action;
 import org.mornframework.webmvc.annotation.ResponseJson;
 import org.mornframework.webmvc.annotation.RequestRoute;
 import org.mornframework.webmvc.support.ModelAndView;
+import org.mornframework.webmvc.support.RequestMethod;
 
 import com.morn.testweb.domain.User;
 
@@ -48,7 +49,7 @@ public class LoginAction{
 		}
 	}
 	
-	@RequestRoute("/say")
+	@RequestRoute(value="/say", method=RequestMethod.POST)
 	public String say(String text){
 		System.out.println("text:"+text);
 		return "redirect:hello";
@@ -65,8 +66,9 @@ public class LoginAction{
 	}
 	
 	@RequestRoute("/toIndex")
-	public ModelAndView toIndex(){
+	public ModelAndView toIndex(String num){
 		System.out.println(this);
+		Integer.parseInt(num);
 		Map<String, Object> model = new HashMap<String, Object>();
 		model.put("year", 2016);
 		model.put("month", 9);

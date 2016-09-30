@@ -12,18 +12,17 @@
 *                                    Thanks.
 */
 
-package com.morn.testweb.action;
+package org.mornframework.webmvc.exception;
 
-public class BaseAction {
+public class ServletRequestException extends Exception{
 
-	private String path;
-
-	public String getPath() {
-		return path;
-	}
-
-	public void setPath(String path) {
-		this.path = path;
-	}
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	
+	public ServletRequestException(String message){
+		super(message);
+	}
+
 }

@@ -12,18 +12,13 @@
 *                                    Thanks.
 */
 
-package com.morn.testweb.action;
+package org.mornframework.webmvc.support;
 
-public class BaseAction {
-
-	private String path;
-
-	public String getPath() {
-		return path;
-	}
-
-	public void setPath(String path) {
-		this.path = path;
-	}
+/**
+ * @author Jeff.Li
+ * @date 2016年9月30日
+ */
+public enum RequestMethod {
 	
+	GET, HEAD, POST, PUT, DELETE, OPTIONS, TRACE
 }

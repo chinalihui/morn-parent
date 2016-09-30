@@ -33,7 +33,7 @@ public abstract class Handler {
 	 * @return
 	 */
 	public abstract Object handle(String uri, HttpServletRequest request,
-			HttpServletResponse response,boolean[] flag);
+			HttpServletResponse response,boolean[] flag)  throws Exception ;
 	
 	/**
 	 * 
