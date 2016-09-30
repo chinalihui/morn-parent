@@ -44,6 +44,7 @@ public class ActionHandler extends Handler{
 	private Map<String,ReqMapping> reqMappingMaps;
 	protected AbstractFactoryBean factoryBean;
 	protected final Logger LOG = LoggerFactory.getLogger(getClass());
+	protected ThreadLocal<Object> actionObject = new ThreadLocal<Object>();
 	
 	public ActionHandler(AbstractFactoryBean factoryBean,
 			Map<String,ReqMapping> reqMappingMaps){
@@ -57,7 +58,7 @@ public class ActionHandler extends Handler{
 		flag[0] = true;
 		ReqMapping reqMapping = reqMappingMaps.get(uri);
 		
-		Object action = factoryBean.getBean(reqMapping.getActionName());
+		Object action = getAction(reqMapping.getActionName());
 		try {
 			Class<?>[] paramsTypes = reqMapping.getParamsTypes();
 			Method method = action.getClass().getMethod(reqMapping.getMethodName(),paramsTypes);
@@ -81,6 +82,9 @@ public class ActionHandler extends Handler{
 			e.printStackTrace();
 		} catch (SecurityException e) {
 			e.printStackTrace();
+		}
+		finally{
+			actionObject.remove();
 		}
 		return null;
 	}
@@ -233,7 +237,16 @@ public class ActionHandler extends Handler{
 
 	@Override
 	public Object getAction(String actionName) {
-		return factoryBean.getBean(actionName);
+		Object object = actionObject.get();
+		if(object != null){
+			return object;
+		}
+		object = factoryBean.getBean(actionName);
+		if(object != null){
+			actionObject.set(object);
+			return object;
+		}
+		return object;
 	}
 
 }

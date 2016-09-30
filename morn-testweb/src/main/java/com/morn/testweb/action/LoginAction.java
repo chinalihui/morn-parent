@@ -66,6 +66,7 @@ public class LoginAction{
 	
 	@RequestRoute("/toIndex")
 	public ModelAndView toIndex(){
+		System.out.println(this);
 		Map<String, Object> model = new HashMap<String, Object>();
 		model.put("year", 2016);
 		model.put("month", 9);

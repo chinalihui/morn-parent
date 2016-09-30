@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
+import org.mornframework.context.annotation.Scope;
 import org.mornframework.context.util.ClassUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractFactoryBean implements FactoryBean{
 	
 	protected Map<String, Object> beans;
+	protected Map<String, Class<?>> prototypeClasses;
 	protected List<Class<?>> contextClasss;
 	protected List<Class<?>> annotationClasss;
 	protected final Logger LOG = LoggerFactory.getLogger(getClass());
@@ -60,11 +62,27 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 	}
 	
 	public Object getBean(String name){
-		return beans.get(name);
+		Object object = beans.get(name);
+		if(object == null){
+			object = createBean(prototypeClasses.get(name));
+		}
+		return object;
 	}
 	
 	public List<Class<?>> getAnnotationClasss(){
 		return annotationClasss;
+	}
+	
+	public boolean isSingleton(Class<?> clazz){
+		Scope scope = clazz.getAnnotation(Scope.class);
+		if(scope == null){
+			return true;
+		}
+		
+		if(!SCOPE_PROTOTYPE.equals(scope.value())){
+			return true;
+		}
+		return false;
 	}
 	
 	/**
@@ -85,5 +103,12 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 	 * @return
 	 */
 	public abstract String getBeanName(Class<?> clazz);
+	
+	/**
+	 * 
+	 * @param clazz
+	 * @return
+	 */
+	public abstract Object createBean(Class<?> clazz);
 	
 }

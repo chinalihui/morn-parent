@@ -16,6 +16,7 @@ package org.mornframework.context.beans.factory;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -36,6 +37,7 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 	public ContextFactoryBean(String basePackage){
 		scanContextClasss(basePackage);
 		beans = new LinkedHashMap<String, Object>();
+		prototypeClasses = new HashMap<String, Class<?>>();
 	}
 	
 	@Override
@@ -46,13 +48,29 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		}
 		
 		for (Class<?> clazz : annotationClasss) {
-			createBean(clazz);
+			String beanName = getBeanName(clazz);
+			if(isSingleton(clazz)){
+				createBean(beanName,clazz,true);
+			}
+			else{
+				prototypeClasses.put(beanName, clazz);
+			}
 		}
 		
 	}
 	
 	public Object createBean(Class<?> clazz){
-		String beanName = getBeanName(clazz);
+		if(clazz == null) return null;
+		return createBean(getBeanName(clazz),clazz);
+	}
+	
+	public Object createBean(String beanName,Class<?> clazz){
+		if(clazz == null) return null;
+		return createBean(beanName,clazz,isSingleton(clazz));
+	}
+	
+	public Object createBean(String beanName,Class<?> clazz,boolean isSingleton){
+		if(clazz == null) return null;
 		if(beans.containsKey(beanName)){
 			return beans.get(beanName);
 		}
@@ -100,7 +118,9 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 				}
 			}
 		}
-		beans.put(beanName, beanObject);
+		if(isSingleton){
+			beans.put(beanName, beanObject);
+		}
 		return beanObject;
 	}
 	
@@ -137,7 +157,7 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		for (Map.Entry<String, Object> bean : beans.entrySet()) {
 			Object beanObj = bean.getValue();
 			if(isInterface){
-				Class<?>[] interfaces = bean.getClass().getInterfaces();
+				Class<?>[] interfaces = beanObj.getClass().getInterfaces();
 				if(interfaces != null){
 					for (Class<?> interf : interfaces) {
 						if(type == interf){
@@ -172,7 +192,6 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		}
 		return null;
 	}
-	
 	
 	public boolean isContextAnnotation(Class<?> clazz){
 		if(clazz.getAnnotation(Component.class) != null ||
