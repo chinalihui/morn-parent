@@ -30,16 +30,19 @@ public class ReqMapping {
 	private String methodName;
 	private String[] paramNames;
 	private Annotation[] annotations;
+	private Annotation[][] paramsAnnotation;
 	private String actionName;
 	private List<ActionInterceptor> interceptors;
 	private RequestMethod[] requestMethod;
 	
-	public ReqMapping(Class<?>[] paramsTypes,Class<?> returnType,
+	public ReqMapping(Class<?>[] paramsTypes,
+			Annotation[][] paramsAnnotation,Class<?> returnType,
 			String reqUri,String methodName,String[] paramNames,
 			Annotation[] annotations,String actionName,
 			List<ActionInterceptor> interceptors,
 			RequestMethod[] requestMethod){
 		this.paramsTypes = paramsTypes;
+		this.paramsAnnotation = paramsAnnotation;
 		this.returnType = returnType;
 		this.reqUri = reqUri;
 		this.methodName = methodName;
@@ -58,6 +61,13 @@ public class ReqMapping {
 		this.requestMethod = requestMethod;
 	}
 
+	public Annotation[][] getParamsAnnotation() {
+		return paramsAnnotation;
+	}
+
+	public void setParamsAnnotation(Annotation[][] paramsAnnotation) {
+		this.paramsAnnotation = paramsAnnotation;
+	}
 
 	public List<ActionInterceptor> getInterceptors() {
 		return interceptors;
@@ -145,5 +155,17 @@ public class ReqMapping {
 			}
 		}
 		return false;
+	}
+	
+	public Annotation getParamAnnotation(int paramIndex,Class<?> clazz){
+		if(paramsAnnotation == null){
+			return null;
+		}
+		for(Annotation ann : paramsAnnotation[paramIndex]){
+			if(ann.annotationType() == clazz){
+				return ann;
+			}
+		}
+		return null;
 	}
 }

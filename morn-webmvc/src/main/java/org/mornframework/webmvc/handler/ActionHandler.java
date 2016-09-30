@@ -23,7 +23,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import org.mornframework.context.annotation.Value;
 import org.mornframework.context.beans.factory.AbstractFactoryBean;
+import org.mornframework.context.support.ApplicationProperties;
 import org.mornframework.context.util.ClassUtil;
 import org.mornframework.context.util.StringUtils;
 import org.mornframework.webmvc.annotation.ResponseJson;
@@ -144,6 +146,7 @@ public class ActionHandler extends Handler{
 		 */
 		for(int i = 0;i<paramNames.length;i++){
 			Class<?> paramType = paramsTypes[i];
+			Value propertiesValue = null;
 			if(paramType == HttpServletRequest.class)
 				args[i] = request;
 			else if(paramType == HttpServletResponse.class)
@@ -152,6 +155,8 @@ public class ActionHandler extends Handler{
 				args[i] = request.getSession();
 			else if(!ClassUtil.isJavaClass(paramType) && paramValue.containsKey(paramNames[i]))
 				args[i] = pushEntityFields(paramValue.get(paramNames[i]),paramType);
+			else if(ClassUtil.isJavaClass(paramType) && (propertiesValue = (Value)reqMapping.getParamAnnotation(i,Value.class)) != null)
+				args[i] = ApplicationProperties.properties.get(propertiesValue.value());
 			else{
 				String value = request.getParameter(paramNames[i]);
 				if(value == null){

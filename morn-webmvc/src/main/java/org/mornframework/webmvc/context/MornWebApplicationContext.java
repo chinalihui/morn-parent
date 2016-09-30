@@ -120,7 +120,7 @@ public class MornWebApplicationContext implements MornApplication{
 					try {
 						CtMethod cm = cc.getDeclaredMethod(method.getName());
 						MethodInfo methodInfo = cm.getMethodInfo();  
-			            CodeAttribute codeAttribute = methodInfo.getCodeAttribute();  
+			            CodeAttribute codeAttribute = methodInfo.getCodeAttribute();
 			            LocalVariableAttribute attr = (LocalVariableAttribute) codeAttribute.getAttribute(LocalVariableAttribute.tag);  
 			            if (attr == null) continue;
 			            
@@ -130,6 +130,7 @@ public class MornWebApplicationContext implements MornApplication{
 			                paramNames[i] = attr.variableName(i + pos);
 			            
 			            reqMappingMaps.put(uri,new ReqMapping(method.getParameterTypes(),
+			            									  method.getParameterAnnotations(),
 														  	  method.getReturnType(),
 														      req.value(),
 														      method.getName(),

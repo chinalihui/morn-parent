@@ -26,6 +26,9 @@ import org.mornframework.context.annotation.Dao;
 import org.mornframework.context.annotation.Inject;
 import org.mornframework.context.annotation.Interceptor;
 import org.mornframework.context.annotation.Service;
+import org.mornframework.context.annotation.Value;
+import org.mornframework.context.support.ApplicationProperties;
+import org.mornframework.context.util.ClassUtil;
 import org.mornframework.context.util.StringUtils;
 
 /**
@@ -88,6 +91,7 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		Field[] fields = clazz.getDeclaredFields();
 		for(Field field : fields){
 			Inject inject = field.getAnnotation(Inject.class);
+			Value value = null;
 			if(inject != null){
 				Class<?> fieldType = field.getType();
 				String name = inject.value();
@@ -116,6 +120,17 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 					} catch (IllegalAccessException e) {
 						e.printStackTrace();
 					}
+				}
+			}
+			else if((value = field.getAnnotation(Value.class)) != null && ClassUtil.isJavaClass(field.getType())){
+				String fieldValue = ApplicationProperties.properties.get(value.value());
+				try {
+					field.setAccessible(true);
+					field.set(beanObject, fieldValue);
+				} catch (IllegalArgumentException e) {
+					e.printStackTrace();
+				} catch (IllegalAccessException e) {
+					e.printStackTrace();
 				}
 			}
 		}

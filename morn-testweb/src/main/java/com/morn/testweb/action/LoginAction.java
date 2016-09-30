@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.mornframework.context.annotation.Action;
+import org.mornframework.context.annotation.Value;
 import org.mornframework.webmvc.annotation.ResponseJson;
 import org.mornframework.webmvc.annotation.RequestRoute;
 import org.mornframework.webmvc.support.ModelAndView;
@@ -55,8 +56,15 @@ public class LoginAction{
 		return "redirect:hello";
 	}
 	
+	@Value("app.name")
+	private String appName;
+	
+	@Value("author")
+	private String author;
+	
 	@RequestRoute("/sayJson")
-	public @ResponseJson Map<String, Object> sayJson(){
+	public @ResponseJson Map<String, Object> sayJson(@Value("app.url") String url){
+		System.out.println("appName:"+appName + "\t author:"+author + "\t url:" + url);
 		Map<String, Object> map = new HashMap<String, Object>();
 		map.put("name", "Jeff.Li");
 		map.put("address", "ShangHai");
