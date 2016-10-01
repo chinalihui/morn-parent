@@ -163,26 +163,18 @@ public class ActionHandler extends Handler{
 					args[i] = defaultValue(paramType);
 					continue;
 				}
-				if(paramType == String.class){
-					args[i] = value;
-				}else if(paramType == int.class){
-					try{
+				
+				try{
+					if(paramType == String.class)
+						args[i] = value;
+					else if(paramType == int.class)
 						args[i] = Integer.parseInt(value);
-					}catch(Exception e){
-						args[i] = defaultValue(paramType);
-					}
-				}else if(paramType == boolean.class){
-					try{
+					else if(paramType == boolean.class)
 						args[i] = Boolean.parseBoolean(value);
-					}catch(Exception e){
-						args[i] = defaultValue(paramType);
-					}
-				}else if(paramType == double.class){
-					try{
+					else if(paramType == double.class)
 						args[i] = Double.parseDouble(value);
-					}catch(Exception e){
-						args[i] = defaultValue(paramType);
-					}
+				}catch(Exception e){
+					args[i] = defaultValue(paramType);
 				}
 			}
 		}
