@@ -12,8 +12,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.mornframework.context.annotation.Action;
 import org.mornframework.context.annotation.Value;
-import org.mornframework.webmvc.annotation.ResponseJson;
 import org.mornframework.webmvc.annotation.RequestRoute;
+import org.mornframework.webmvc.annotation.ResponseJson;
 import org.mornframework.webmvc.support.ModelAndView;
 import org.mornframework.webmvc.support.RequestMethod;
 
@@ -50,7 +50,7 @@ public class LoginAction{
 		}
 	}
 	
-	@RequestRoute(value="/say", method=RequestMethod.POST)
+	@RequestRoute(value="/say",method=RequestMethod.POST)
 	public String say(String text){
 		System.out.println("text:"+text);
 		return "redirect:hello";
