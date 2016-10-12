@@ -24,4 +24,18 @@ public class StringUtils extends org.apache.commons.lang.StringUtils {
 		return str.replaceFirst(str.substring(0, 1),str.substring(0, 1).toUpperCase());
 	}
 	
+	public static boolean includeProperty(String propertyName){
+		if(isEmpty(propertyName)){
+			return false;
+		}
+		return propertyName.startsWith("${") && propertyName.endsWith("}");
+	}
+	
+	public static String propertyKey(String propertyName){
+		if(isEmpty(propertyName)){
+			return propertyName;
+		}
+		return propertyName.replace("${", "").replace("}", "");
+	}
+	
 }

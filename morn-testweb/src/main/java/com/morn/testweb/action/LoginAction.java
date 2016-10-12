@@ -56,14 +56,14 @@ public class LoginAction{
 		return "redirect:hello";
 	}
 	
-	@Value("app.name")
+	@Value("${app.name}")
 	private String appName;
 	
-	@Value("author")
+	@Value("${author}")
 	private String author;
 	
 	@RequestRoute("/sayJson")
-	public @ResponseJson Map<String, Object> sayJson(@Value("app.url") String url){
+	public @ResponseJson Map<String, Object> sayJson(@Value("${app.url}") String url){
 		System.out.println("appName:"+appName + "\t author:"+author + "\t url:" + url);
 		Map<String, Object> map = new HashMap<String, Object>();
 		map.put("name", "Jeff.Li");

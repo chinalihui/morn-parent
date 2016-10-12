@@ -16,8 +16,11 @@ package org.mornframework.context.beans.factory;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.mornframework.context.annotation.Action;
@@ -27,6 +30,10 @@ import org.mornframework.context.annotation.Inject;
 import org.mornframework.context.annotation.Interceptor;
 import org.mornframework.context.annotation.Service;
 import org.mornframework.context.annotation.Value;
+import org.mornframework.context.beans.annotation.Beans;
+import org.mornframework.context.beans.annotation.Element;
+import org.mornframework.context.beans.annotation.Entry;
+import org.mornframework.context.beans.exception.BeanInitializeException;
 import org.mornframework.context.support.ApplicationProperties;
 import org.mornframework.context.util.ClassUtil;
 import org.mornframework.context.util.StringUtils;
@@ -34,13 +41,15 @@ import org.mornframework.context.util.StringUtils;
 /**
  * @author Jeff.Li
  * @date 2016年9月28日
+ * 1.初始化上下文Bean,包括基本注解以及配置@Beans--@Bean
  */
 public class ContextFactoryBean extends AbstractFactoryBean{
 
 	public ContextFactoryBean(String basePackage){
-		scanContextClasss(basePackage);
 		beans = new LinkedHashMap<String, Object>();
 		prototypeClasses = new HashMap<String, Class<?>>();
+		beanDefinitions = new HashMap<String, BeanDefinition>();
+		scanContextClasss(basePackage);
 		BeanHolder.factoryBean = this;
 	}
 	
@@ -61,6 +70,111 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 			}
 		}
 		
+		for(Map.Entry<String, BeanDefinition> entry : beanDefinitions.entrySet()){
+			BeanDefinition beanDefinition = entry.getValue();
+			if(SCOPE_SINGLETON.equals(beanDefinition.getScope())){
+				createBean(entry.getKey(),beanDefinition,true);
+			}
+		}
+	
+	}
+	
+	public Object createBean(String beanName,BeanDefinition beanDefinition){
+		return createBean(beanName,beanDefinition,SCOPE_SINGLETON.equals(beanDefinition.getScope()));
+	}
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public Object createBean(String beanName,BeanDefinition beanDefinition,boolean isSingleton){
+		Object beanObject = beans.get(beanName);
+		if(beanObject != null){
+			return beanObject;
+		}
+		try{
+			String beanClass = beanDefinition.getBeanClass();
+			Class<?> clazz = Class.forName(beanClass);
+			beanObject = clazz.newInstance();
+			Map<String, PropertyDefinition> propertyMap = beanDefinition.getPropertys();
+			if(propertyMap != null && propertyMap.size() > 0){
+				for(Map.Entry<String, PropertyDefinition> entryPropertyDefinition : propertyMap.entrySet()){
+					PropertyDefinition propertyDefinition = entryPropertyDefinition.getValue();
+					String fieldName = entryPropertyDefinition.getKey();
+					Object value = null;
+					boolean valueFlag = false;
+					String strValue = propertyDefinition.getValue();
+					if(StringUtils.isNotEmpty(strValue)){
+						valueFlag = true;
+						value = strValue;
+					}
+					
+					if(value == null){
+						String refBeanName = propertyDefinition.getRef();
+						if(StringUtils.isNotEmpty(refBeanName)){
+							value = beans.get(refBeanName);
+							/**
+							 * 从@Bean集合中获取,如果存在则创建
+							 */
+							if(value == null){
+								BeanDefinition refBeanDefinition = beanDefinitions.get(refBeanName);
+								if(refBeanDefinition != null){
+									value = createBean(refBeanName,refBeanDefinition,SCOPE_SINGLETON.equals(refBeanDefinition.getScope()));
+								}
+							}
+							
+							if(value == null){
+								Class<?> fieldClass = clazz.getDeclaredField(fieldName).getType();
+								value = findContextBean(fieldClass);
+							}
+							
+							if(value == null){
+								throw new BeanInitializeException("[Application Context] Initialize Bean:"
+										+ "" + beanClass + " exception ,reason is property '" + fieldName + "'"
+												+ " ref " + refBeanName + " in not found or not initialize ");
+							}
+						}
+					}
+					
+					if(value == null){
+						Element[] elements = propertyDefinition.getList();
+						if(elements != null && elements.length > 0){
+							List<String> list = new ArrayList<String>();
+							for(Element element : elements) list.add(element.value());
+							value = list;
+						}
+					}
+					
+					if(value == null){
+						Entry[] entrys = propertyDefinition.getMap();
+						if(entrys != null && entrys.length > 0){
+							Map map = new HashMap();
+							for(Entry entry : entrys) map.put(entry.key(),entry.value());
+							value = map;
+						}
+					}
+					
+					if(value != null){
+						Class<?> fieldType = clazz.getDeclaredField(fieldName).getType();
+						Method method = clazz.getDeclaredMethod("set"+StringUtils.firstToUpperCase(fieldName),fieldType);
+						if(valueFlag){
+							if(StringUtils.includeProperty(strValue)){
+								strValue = ApplicationProperties.properties.get(StringUtils.propertyKey(strValue));
+								value = ClassUtil.parseValue(strValue, fieldType);
+							}
+							else{
+								value = ClassUtil.parseValue(strValue, fieldType);
+							}
+						}
+						method.invoke(beanObject, value);
+					}
+					
+				}
+			}
+			if(isSingleton){
+				beans.put(beanName, beanObject);
+			}
+		} catch (Exception e) {
+			throw new BeanInitializeException(e);
+		}
+		return beanObject;
 	}
 	
 	public Object createBean(Class<?> clazz){
@@ -100,14 +214,15 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 				}
 				
 				Object bean = beans.get(name);
+				
 				if(bean == null){
-					bean = findBean(fieldType);
+					bean = findContextBean(fieldType);
 				}
 				
 				if(bean == null){
-					Class<?> fieldClass = findContextClasss(fieldType);
-					if(fieldClass != null){
-						bean = createBean(fieldClass);
+					BeanDefinition beanDefinition = beanDefinitions.get(name);
+					if(beanDefinition != null){
+						bean = createBean(name, beanDefinition, SCOPE_SINGLETON.equals(beanDefinition.getScope()));
 					}
 				}
 			
@@ -123,14 +238,19 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 				}
 			}
 			else if((value = field.getAnnotation(Value.class)) != null && ClassUtil.isJavaClass(field.getType())){
-				String fieldValue = ApplicationProperties.properties.get(value.value());
-				try {
-					field.setAccessible(true);
-					field.set(beanObject, fieldValue);
-				} catch (IllegalArgumentException e) {
-					e.printStackTrace();
-				} catch (IllegalAccessException e) {
-					e.printStackTrace();
+				String vlaueStr = value.value();
+				if(StringUtils.isNotEmpty(vlaueStr) && StringUtils.includeProperty(vlaueStr)){
+					vlaueStr = StringUtils.propertyKey(vlaueStr);
+					String fieldValue = ApplicationProperties.properties.get(vlaueStr);
+					Object objectValue = ClassUtil.parseValue(fieldValue, field.getType());
+					try {
+						field.setAccessible(true);
+						field.set(beanObject, objectValue);
+					} catch (IllegalArgumentException e) {
+						e.printStackTrace();
+					} catch (IllegalAccessException e) {
+						e.printStackTrace();
+					}
 				}
 			}
 		}
@@ -138,6 +258,24 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 			beans.put(beanName, beanObject);
 		}
 		return beanObject;
+	}
+	
+	public Object findContextBean(Class<?> fieldType){
+		/**
+		 * 从已经实例化的Bean中找对应类型
+		 */
+		Object bean = findBean(fieldType);
+		
+		/**
+		 * 从基本注解Bean中找类型匹配的Bean
+		 */
+		if(bean == null){
+			Class<?> fieldClass = findContextClasss(fieldType);
+			if(fieldClass != null){
+				bean = createBean(fieldClass);
+			}
+		}
+		return bean;
 	}
 	
 	public String getBeanName(Class<?> clazz){
@@ -214,7 +352,8 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		   clazz.getAnnotation(Interceptor.class) != null ||
 		   clazz.getAnnotation(Action.class) != null ||
 		   clazz.getAnnotation(Service.class) != null ||
-		   clazz.getAnnotation(Dao.class) != null){
+		   clazz.getAnnotation(Dao.class) != null || 
+		   clazz.getAnnotation(Beans.class) != null){
 			return true;
 		}
 		return false;

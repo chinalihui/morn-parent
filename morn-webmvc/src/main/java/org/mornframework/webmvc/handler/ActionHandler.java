@@ -13,7 +13,6 @@
 */
 package org.mornframework.webmvc.handler;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,6 +41,7 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Jeff.Li
  * @date 2016年9月20日
+ * 1.处理前端请求
  */
 public class ActionHandler extends Handler{
 	
@@ -155,27 +155,18 @@ public class ActionHandler extends Handler{
 				args[i] = request.getSession();
 			else if(!ClassUtil.isJavaClass(paramType) && paramValue.containsKey(paramNames[i]))
 				args[i] = pushEntityFields(paramValue.get(paramNames[i]),paramType);
-			else if(ClassUtil.isJavaClass(paramType) && (propertiesValue = (Value)reqMapping.getParamAnnotation(i,Value.class)) != null)
-				args[i] = ApplicationProperties.properties.get(propertiesValue.value());
+			else if(ClassUtil.isJavaClass(paramType) && (propertiesValue = (Value)reqMapping.getParamAnnotation(i,Value.class)) != null && StringUtils.includeProperty(propertiesValue.value())){
+				String strValue = StringUtils.propertyKey(propertiesValue.value());
+				args[i] = ClassUtil.parseValue(ApplicationProperties.properties.get(strValue), paramType);
+			}
 			else{
 				String value = request.getParameter(paramNames[i]);
 				if(value == null){
-					args[i] = defaultValue(paramType);
+					args[i] = ClassUtil.defaultValue(paramType);
 					continue;
 				}
 				
-				try{
-					if(paramType == String.class)
-						args[i] = value;
-					else if(paramType == int.class)
-						args[i] = Integer.parseInt(value);
-					else if(paramType == boolean.class)
-						args[i] = Boolean.parseBoolean(value);
-					else if(paramType == double.class)
-						args[i] = Double.parseDouble(value);
-				}catch(Exception e){
-					args[i] = defaultValue(paramType);
-				}
+				args[i] = ClassUtil.parseValue(value, paramType);
 			}
 		}
 		return args;
@@ -187,45 +178,16 @@ public class ActionHandler extends Handler{
 			object = clazz.newInstance();
 			for(Map.Entry<String, Object> nameValue : nameValues.entrySet()){
 				String fieldName = nameValue.getKey();
-				try {
-					Method method = clazz.getMethod("set"+StringUtils.firstToUpperCase(fieldName)
-							,clazz.getDeclaredField(fieldName).getType());
-					try {
-						method.invoke(object, nameValue.getValue());
-					} catch (IllegalArgumentException e) {
-						e.printStackTrace();
-					} catch (InvocationTargetException e) {
-						e.printStackTrace();
-					}
-				} catch (NoSuchMethodException e) {
-					e.printStackTrace();
-				} catch (SecurityException e) {
-					e.printStackTrace();
-				} catch (NoSuchFieldException e) {
-					e.printStackTrace();
-				}
+				Method method = clazz.getMethod("set"+StringUtils.firstToUpperCase(fieldName)
+						,clazz.getDeclaredField(fieldName).getType());
+				method.invoke(object, nameValue.getValue());
 			}
-		} catch (InstantiationException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return object;
 	}
 	
-	public Object defaultValue(Class<?> type){
-		if(type == int.class || type == byte.class || type == short.class){
-			return 0;
-		}else if(type == boolean.class){
-			return false;
-		}else if(type == long.class){
-			return 0L;
-		}else if(type == double.class){
-			return 0.0d;
-		}
-		return null;
-	}
-
 	@Override
 	public ReqMapping getReqMapping(String uri) {
 		return reqMappingMaps.get(uri);

@@ -25,6 +25,10 @@ import com.alibaba.fastjson.serializer.SerializeConfig;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alibaba.fastjson.serializer.SimpleDateFormatSerializer;
 
+/**
+ * @author Jeff.Li
+ * @date 2016年9月20日
+ */
 public class JsonOutput extends Output{
 	
 	private static String dateFormat;

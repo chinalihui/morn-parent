@@ -159,6 +159,39 @@ public class ClassUtil {
                 }  
             }  
         }  
-    }  
+    }
+    
+    public static Object defaultValue(Class<?> type){
+		if(type == int.class || type == byte.class || type == short.class){
+			return 0;
+		}else if(type == boolean.class){
+			return false;
+		}else if(type == long.class){
+			return 0L;
+		}else if(type == double.class){
+			return 0.0d;
+		}
+		return null;
+	}
+    
+    public static Object parseValue(String value,Class<?> paramType){
+    	if(StringUtils.isEmpty(value)){
+    		return defaultValue(paramType);
+    	}
+    	Object returnVal = null;
+    	try{
+			if(paramType == String.class)
+				returnVal = value;
+			else if(paramType == int.class || paramType == Integer.class)
+				returnVal = Integer.parseInt(value);
+			else if(paramType == boolean.class || paramType == Boolean.class)
+				returnVal = Boolean.parseBoolean(value);
+			else if(paramType == double.class || paramType == Double.class)
+				returnVal = Double.parseDouble(value);
+		}catch(Exception e){
+			returnVal = defaultValue(paramType);
+		}
+    	return returnVal;
+    }
     
 }
