@@ -35,6 +35,9 @@ import org.mornframework.context.beans.annotation.Element;
 import org.mornframework.context.beans.annotation.Entry;
 import org.mornframework.context.beans.exception.BeanInitializeException;
 import org.mornframework.context.beans.extend.BeanPostProcessor;
+import org.mornframework.context.beans.extend.FactoryBeanAware;
+import org.mornframework.context.beans.extend.InitializingBean;
+import org.mornframework.context.beans.extend.annotation.InitMethod;
 import org.mornframework.context.support.ApplicationProperties;
 import org.mornframework.context.util.ClassUtil;
 import org.mornframework.context.util.StringUtils;
@@ -170,8 +173,19 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 					
 				}
 			}
+			
+			/**
+			 * 通过注解设置属性
+			 */
+			setterBeanAnnotation(beanObject, clazz.getDeclaredFields());
+			
 			if(isSingleton){
 				beans.put(beanName, beanObject);
+				
+				/**
+				 * 扩展创建bean方法
+				 */
+				extendCreateBean(beanObject);
 			}
 		} catch (Exception e) {
 			throw new BeanInitializeException(e);
@@ -196,15 +210,28 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		}
 		
 		Object beanObject = null;
-		try {
-			 beanObject = clazz.newInstance();
-		} catch (InstantiationException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
+		try{
+			beanObject = clazz.newInstance();
+			/**
+			 * 通过注解设置属性
+			 */
+			setterBeanAnnotation(beanObject,clazz.getDeclaredFields());
+			
+			if(isSingleton){
+				beans.put(beanName, beanObject);
+				
+				/**
+				 * 扩展创建bean方法
+				 */
+				extendCreateBean(beanObject);
+			}
+		}catch(Exception e){
+			throw new BeanInitializeException(e);
 		}
-		
-		Field[] fields = clazz.getDeclaredFields();
+		return beanObject;
+	}
+	
+	public void setterBeanAnnotation(Object beanObject,Field[] fields){
 		for(Field field : fields){
 			Inject inject = field.getAnnotation(Inject.class);
 			Value value = null;
@@ -256,10 +283,6 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 				}
 			}
 		}
-		if(isSingleton){
-			beans.put(beanName, beanObject);
-		}
-		return beanObject;
 	}
 	
 	public Object findContextBean(Class<?> fieldType){
@@ -359,6 +382,35 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 			return true;
 		}
 		return false;
+	}
+	
+	public void extendCreateBean(Object beanObject)throws Exception{
+		/**
+		 * 辅助为bean设置上下文FactoryBean
+		 */
+		if(beanObject instanceof FactoryBeanAware){
+			((FactoryBeanAware) beanObject ).setFactoryBean(this);
+		}
+		
+		/**
+		 * 调用其初始化bean方法
+		 */
+		if(beanObject instanceof InitializingBean){
+			((InitializingBean) beanObject ).afterPropertiesSet();
+		}
+		
+		/**
+		 * 如果存在@InitMethod注解 则调用
+		 */
+		Method[] methods = beanObject.getClass().getDeclaredMethods();
+		if(methods != null && methods.length > 0){
+			for(Method method : methods){
+				if(method.getAnnotation(InitMethod.class) != null){
+					method.invoke(beanObject, new Object[]{});
+					break;
+				}
+			}
+		}
 	}
 
 }
