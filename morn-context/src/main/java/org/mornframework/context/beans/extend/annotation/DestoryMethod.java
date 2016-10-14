@@ -28,6 +28,6 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface DestoryMethod {
+public @interface DestoryMethod { 
 
 }

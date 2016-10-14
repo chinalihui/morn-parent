@@ -23,5 +23,5 @@ public interface InitializingBean {
 	/**
 	 * 设置Bean属性之后执行
 	 */
-	void afterPropertiesSet() throws Exception;
+	void afterPropertiesSet() throws Exception; 
 }

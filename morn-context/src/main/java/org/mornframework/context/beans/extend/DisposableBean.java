@@ -24,5 +24,5 @@ public interface DisposableBean {
 	 * 销毁Bean执行
 	 * @throws Exception
 	 */
-	void destroy() throws Exception;
+	void destroy() throws Exception; 
 }

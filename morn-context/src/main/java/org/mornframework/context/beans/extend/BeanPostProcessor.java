@@ -21,7 +21,7 @@ import org.mornframework.context.beans.exception.BeanInitializeException;
  * @date 2016年10月13日
  * 实例化Bean之后辅助方法
  */
-public interface BeanPostProcessor {
+public interface BeanPostProcessor { 
 	
 	/**
 	 * 实例化Bean后,调用完set方法之后执行

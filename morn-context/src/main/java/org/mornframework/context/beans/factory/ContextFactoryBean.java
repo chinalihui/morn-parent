@@ -144,7 +144,7 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 						}
 					}
 					
-					if(value == null){
+					if(value == null){ 
 						Entry[] entrys = propertyDefinition.getMap();
 						if(entrys != null && entrys.length > 0){
 							Map map = new HashMap();

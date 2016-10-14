@@ -27,6 +27,6 @@ public interface FactoryBeanAware {
 	 * 设置FactoryBean
 	 * @param factoryBean
 	 */
-	void setFactoryBean(FactoryBean factoryBean);
+	void setFactoryBean(FactoryBean factoryBean); 
 	
 }
