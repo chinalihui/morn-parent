@@ -372,7 +372,7 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		return null;
 	}
 	
-	public boolean isContextAnnotation(Class<?> clazz){ 
+	public boolean isContextAnnotation(Class<?> clazz){
 		return clazz.getAnnotation(Component.class) != null ||
 			   clazz.getAnnotation(Interceptor.class) != null ||
 		       clazz.getAnnotation(Action.class) != null ||
