@@ -34,6 +34,7 @@ import org.mornframework.context.beans.annotation.Beans;
 import org.mornframework.context.beans.annotation.Element;
 import org.mornframework.context.beans.annotation.Entry;
 import org.mornframework.context.beans.exception.BeanInitializeException;
+import org.mornframework.context.beans.extend.BeanPostProcessor;
 import org.mornframework.context.support.ApplicationProperties;
 import org.mornframework.context.util.ClassUtil;
 import org.mornframework.context.util.StringUtils;
@@ -49,6 +50,7 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		beans = new LinkedHashMap<String, Object>();
 		prototypeClasses = new HashMap<String, Class<?>>();
 		beanDefinitions = new HashMap<String, BeanDefinition>();
+		beanPostProcessorList = new ArrayList<BeanPostProcessor>();
 		scanContextClasss(basePackage);
 		BeanHolder.factoryBean = this;
 	}

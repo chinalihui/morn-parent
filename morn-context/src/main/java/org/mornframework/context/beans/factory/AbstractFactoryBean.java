@@ -26,6 +26,7 @@ import org.mornframework.context.beans.annotation.Bean;
 import org.mornframework.context.beans.annotation.Beans;
 import org.mornframework.context.beans.annotation.Property;
 import org.mornframework.context.beans.exception.BeanInitializeException;
+import org.mornframework.context.beans.extend.BeanPostProcessor;
 import org.mornframework.context.util.ClassUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,7 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 	protected List<Class<?>> contextClasss;
 	protected List<Class<?>> annotationClasss;
 	protected Map<String,BeanDefinition> beanDefinitions;
+	protected List<BeanPostProcessor> beanPostProcessorList;
 	protected final Logger LOG = LoggerFactory.getLogger(getClass());
 	
 	/**
