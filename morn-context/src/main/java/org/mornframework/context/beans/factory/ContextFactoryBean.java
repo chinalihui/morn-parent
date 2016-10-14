@@ -373,15 +373,12 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 	}
 	
 	public boolean isContextAnnotation(Class<?> clazz){
-		if(clazz.getAnnotation(Component.class) != null ||
-		   clazz.getAnnotation(Interceptor.class) != null ||
-		   clazz.getAnnotation(Action.class) != null ||
-		   clazz.getAnnotation(Service.class) != null ||
-		   clazz.getAnnotation(Dao.class) != null || 
-		   clazz.getAnnotation(Beans.class) != null){
-			return true;
-		}
-		return false;
+		return clazz.getAnnotation(Component.class) != null ||
+			   clazz.getAnnotation(Interceptor.class) != null ||
+		       clazz.getAnnotation(Action.class) != null ||
+		       clazz.getAnnotation(Service.class) != null ||
+		       clazz.getAnnotation(Dao.class) != null || 
+		       clazz.getAnnotation(Beans.class) != null;
 	}
 	
 	public void extendCreateBean(Object beanObject)throws Exception{
