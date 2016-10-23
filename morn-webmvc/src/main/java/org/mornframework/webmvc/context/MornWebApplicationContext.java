@@ -63,7 +63,7 @@ public class MornWebApplicationContext implements MornApplication{
 	private FilterConfig filterConfig;
 	private List<InterceptorChain> interceptorChains;
 	private String scanPackage;
-	private List<Class<?>> classList;
+	private Set<Class<?>> classList;
 	private Handler handler;
 	private AbstractFactoryBean factoryBean;
 	
@@ -205,7 +205,7 @@ public class MornWebApplicationContext implements MornApplication{
 		LOG.info("init Web Application Context ");
 		factoryBean = new ContextFactoryBean(scanPackage);
 		factoryBean.createContextBeans();
-		classList = factoryBean.getAnnotationClasss();
+		classList = factoryBean.getAnnotationClasses();
 	}
 	
 	public void initProperties(){

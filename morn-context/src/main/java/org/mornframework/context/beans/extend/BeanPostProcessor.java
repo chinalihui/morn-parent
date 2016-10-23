@@ -24,6 +24,12 @@ import org.mornframework.context.beans.exception.BeanInitializeException;
 public interface BeanPostProcessor { 
 	
 	/**
+	 * 多个BeanPostProcessor执行顺序
+	 * @return
+	 */
+	int getOrder();
+	
+	/**
 	 * 实例化Bean后,调用完set方法之后执行
 	 * @param bean
 	 * @param beanName

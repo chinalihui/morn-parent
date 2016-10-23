@@ -19,9 +19,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.mornframework.context.annotation.Action;
 import org.mornframework.context.annotation.Component;
@@ -35,8 +37,10 @@ import org.mornframework.context.beans.annotation.Element;
 import org.mornframework.context.beans.annotation.Entry;
 import org.mornframework.context.beans.exception.BeanInitializeException;
 import org.mornframework.context.beans.extend.BeanPostProcessor;
+import org.mornframework.context.beans.extend.BeanPostProcessorChain;
 import org.mornframework.context.beans.extend.FactoryBeanAware;
 import org.mornframework.context.beans.extend.InitializingBean;
+import org.mornframework.context.beans.extend.RegisterAnnotationResolve;
 import org.mornframework.context.beans.extend.annotation.InitMethod;
 import org.mornframework.context.support.ApplicationProperties;
 import org.mornframework.context.util.ClassUtil;
@@ -49,12 +53,47 @@ import org.mornframework.context.util.StringUtils;
  */
 public class ContextFactoryBean extends AbstractFactoryBean{
 
+	@SuppressWarnings("serial")
 	public ContextFactoryBean(String basePackage){
 		beans = new LinkedHashMap<String, Object>();
-		prototypeClasses = new HashMap<String, Class<?>>();
 		beanDefinitions = new HashMap<String, BeanDefinition>();
-		beanPostProcessorList = new ArrayList<BeanPostProcessor>();
+		beanPostProcessorList = new ArrayList<BeanPostProcessorChain>();
+		annotationClasses = new HashSet<Class<?>>();
+		registerAnnotationResoleMap = new ConcurrentHashMap<Class<?>, RegisterAnnotationResolve>();
+		contextAnnotation = new ArrayList<Class<?>>(){{
+			add(Component.class);
+			add(Action.class);
+			add(Service.class);
+			add(Dao.class);
+			add(Beans.class);
+			add(Interceptor.class);
+		}};
+		
+		/**
+		 * 根据web.xml指定的package扫描Class
+		 */
 		scanContextClasss(basePackage);
+		
+		/**
+		 * 将扫描的Class转换为BeanDefinition
+		 */
+		resoleContextBeanConfig();
+		
+		/**
+		 * 注册解析自定义注解类
+		 */
+		findRegisterAnnotationResole();
+		
+		/**
+		 * 将自定义注解的Class转换为BeanDefinition
+		 */
+		resoleContextBeanConfig();
+		
+		/**
+		 * 注册BeanPostProcessor
+		 */
+		registerBeanPostProcessor();
+		
 		BeanHolder.factoryBean = this;
 	}
 	
@@ -65,18 +104,11 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 			return;
 		}
 		
-		for (Class<?> clazz : annotationClasss) {
-			String beanName = getBeanName(clazz);
-			if(isSingleton(clazz)){
-				createBean(beanName,clazz,true);
-			}
-			else{
-				prototypeClasses.put(beanName, clazz);
-			}
-		}
-		
 		for(Map.Entry<String, BeanDefinition> entry : beanDefinitions.entrySet()){
 			BeanDefinition beanDefinition = entry.getValue();
+			/**
+			 * If bean is singeton
+			 */
 			if(SCOPE_SINGLETON.equals(beanDefinition.getScope())){
 				createBean(entry.getKey(),beanDefinition,true);
 			}
@@ -88,91 +120,52 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		return createBean(beanName,beanDefinition,SCOPE_SINGLETON.equals(beanDefinition.getScope()));
 	}
 	
-	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public Object createBean(String beanName,BeanDefinition beanDefinition,boolean isSingleton){
 		Object beanObject = beans.get(beanName);
 		if(beanObject != null){
 			return beanObject;
 		}
 		try{
-			String beanClass = beanDefinition.getBeanClass();
-			Class<?> clazz = Class.forName(beanClass);
-			beanObject = clazz.newInstance();
-			Map<String, PropertyDefinition> propertyMap = beanDefinition.getPropertys();
-			if(propertyMap != null && propertyMap.size() > 0){
-				for(Map.Entry<String, PropertyDefinition> entryPropertyDefinition : propertyMap.entrySet()){
-					PropertyDefinition propertyDefinition = entryPropertyDefinition.getValue();
-					String fieldName = entryPropertyDefinition.getKey();
-					Object value = null;
-					boolean valueFlag = false;
-					String strValue = propertyDefinition.getValue();
-					if(StringUtils.isNotEmpty(strValue)){
-						valueFlag = true;
-						value = strValue;
+			Class<?> clazz = beanDefinition.getBeanClass();
+			if(beanDefinition.getBeanFlag() == CONTEXT_BEAN_FLAG_ANNOS){
+				
+				/**
+				 * 找是否有自定义注解解释类
+				 */
+				RegisterAnnotationResolve registerAnnotationResolve = null;
+				boolean existRegisterAnnotation = false;
+				Annotation[] annotations = clazz.getAnnotations();
+				for (Annotation annotation : annotations) {
+					registerAnnotationResolve = registerAnnotationResoleMap.get(annotation.annotationType());
+					if(registerAnnotationResolve != null){
+						existRegisterAnnotation = true;
+						break;
 					}
-					
-					if(value == null){
-						String refBeanName = propertyDefinition.getRef();
-						if(StringUtils.isNotEmpty(refBeanName)){
-							value = beans.get(refBeanName);
-							/**
-							 * 从@Bean集合中获取,如果存在则创建
-							 */
-							if(value == null){
-								BeanDefinition refBeanDefinition = beanDefinitions.get(refBeanName);
-								if(refBeanDefinition != null){
-									value = createBean(refBeanName,refBeanDefinition,SCOPE_SINGLETON.equals(refBeanDefinition.getScope()));
-								}
-							}
-							
-							if(value == null){
-								Class<?> fieldClass = clazz.getDeclaredField(fieldName).getType();
-								value = findContextBean(fieldClass);
-							}
-							
-							if(value == null){
-								throw new BeanInitializeException("[Application Context] Initialize Bean:"
-										+ "" + beanClass + " exception ,reason is property '" + fieldName + "'"
-												+ " ref " + refBeanName + " in not found or not initialize ");
-							}
-						}
-					}
-					
-					if(value == null){
-						Element[] elements = propertyDefinition.getList();
-						if(elements != null && elements.length > 0){
-							List<String> list = new ArrayList<String>();
-							for(Element element : elements) list.add(element.value());
-							value = list;
-						}
-					}
-					
-					if(value == null){ 
-						Entry[] entrys = propertyDefinition.getMap();
-						if(entrys != null && entrys.length > 0){
-							Map map = new HashMap();
-							for(Entry entry : entrys) map.put(entry.key(),entry.value());
-							value = map;
-						}
-					}
-					
-					if(value != null){
-						Class<?> fieldType = clazz.getDeclaredField(fieldName).getType();
-						Method method = clazz.getDeclaredMethod("set"+StringUtils.firstToUpperCase(fieldName),fieldType);
-						if(valueFlag){
-							if(StringUtils.includeProperty(strValue)){
-								strValue = ApplicationProperties.properties.get(StringUtils.propertyKey(strValue));
-								value = ClassUtil.parseValue(strValue, fieldType);
-							}
-							else{
-								value = ClassUtil.parseValue(strValue, fieldType);
-							}
-						}
-						method.invoke(beanObject, value);
-					}
-					
+				}
+				
+				/**
+				 * 执行自定义注解处理
+				 * 
+				 */
+				if(existRegisterAnnotation){
+					beanDefinition = registerAnnotationResolve.process(beanDefinition);
+					beanDefinitions.put(beanName, beanDefinition);
+					clazz =  beanDefinition.getBeanClass();
 				}
 			}
+			
+			beanObject = clazz.newInstance();
+			/**
+			 * 辅助为bean设置上下文FactoryBean
+			 */
+			if(beanObject instanceof FactoryBeanAware && isSingleton){
+				((FactoryBeanAware) beanObject ).setFactoryBean(this);
+			}
+			
+			/**
+			 * 通过注入设置属性
+			 */
+			setBeanPropertyValues(beanDefinition,clazz,beanObject);
 			
 			/**
 			 * 通过注解设置属性
@@ -183,9 +176,23 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 				beans.put(beanName, beanObject);
 				
 				/**
+				 * 循环执行BeanPostProcessor.postProcessBeforeInitialization()
+				 */
+				for(BeanPostProcessorChain beanPostProcessorChain : beanPostProcessorList){
+					beanPostProcessorChain.getBeanPostProcessor().postProcessBeforeInitialization(beanObject, beanName);
+				}
+				
+				/**
 				 * 扩展创建bean方法
 				 */
 				extendCreateBean(beanObject);
+				
+				/**
+				 * 循环执行BeanPostProcessor.postProcessAfterInitialization()
+				 */
+				for(BeanPostProcessorChain beanPostProcessorChain : beanPostProcessorList){
+					beanPostProcessorChain.getBeanPostProcessor().postProcessAfterInitialization(beanObject, beanName);
+				}
 			}
 		} catch (Exception e) {
 			throw new BeanInitializeException(e);
@@ -193,42 +200,84 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		return beanObject;
 	}
 	
-	public Object createBean(Class<?> clazz){
-		if(clazz == null) return null;
-		return createBean(getBeanName(clazz),clazz);
-	}
-	
-	public Object createBean(String beanName,Class<?> clazz){
-		if(clazz == null) return null;
-		return createBean(beanName,clazz,isSingleton(clazz));
-	}
-	
-	public Object createBean(String beanName,Class<?> clazz,boolean isSingleton){
-		if(clazz == null) return null;
-		if(beans.containsKey(beanName)){
-			return beans.get(beanName);
-		}
-		
-		Object beanObject = null;
-		try{
-			beanObject = clazz.newInstance();
-			/**
-			 * 通过注解设置属性
-			 */
-			setterBeanAnnotation(beanObject,clazz.getDeclaredFields());
-			
-			if(isSingleton){
-				beans.put(beanName, beanObject);
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public void setBeanPropertyValues(BeanDefinition beanDefinition
+			,Class<?> clazz,Object beanObject) throws Exception{
+		Map<String, PropertyDefinition> propertyMap = beanDefinition.getPropertys();
+		if(propertyMap != null && propertyMap.size() > 0){
+			for(Map.Entry<String, PropertyDefinition> entryPropertyDefinition : propertyMap.entrySet()){
+				PropertyDefinition propertyDefinition = entryPropertyDefinition.getValue();
+				String fieldName = entryPropertyDefinition.getKey();
+				Object value = null;
+				boolean valueFlag = false;
+				String strValue = propertyDefinition.getValue();
+				if(StringUtils.isNotEmpty(strValue)){
+					valueFlag = true;
+					value = strValue;
+				}
 				
-				/**
-				 * 扩展创建bean方法
-				 */
-				extendCreateBean(beanObject);
+				if(value == null){
+					String refBeanName = propertyDefinition.getRef();
+					if(StringUtils.isNotEmpty(refBeanName)){
+						value = beans.get(refBeanName);
+						/**
+						 * 从@Bean集合中获取,如果存在则创建
+						 */
+						if(value == null){
+							BeanDefinition refBeanDefinition = beanDefinitions.get(refBeanName);
+							if(refBeanDefinition != null){
+								value = createBean(refBeanName,refBeanDefinition,SCOPE_SINGLETON.equals(refBeanDefinition.getScope()));
+							}
+						}
+						
+						if(value == null){
+							Class<?> fieldClass = clazz.getDeclaredField(fieldName).getType();
+							value = findContextBean(fieldClass,fieldName);
+						}
+						
+						if(value == null){
+							throw new BeanInitializeException("[Application Context] Initialize Bean:"
+									+ "" + clazz + " exception ,reason is property '" + fieldName + "'"
+											+ " ref " + refBeanName + " in not found or not initialize ");
+						}
+					}
+				}
+				
+				if(value == null){
+					Element[] elements = propertyDefinition.getList();
+					if(elements != null && elements.length > 0){
+						List<String> list = new ArrayList<String>();
+						for(Element element : elements) list.add(element.value());
+						value = list;
+					}
+				}
+				
+				if(value == null){ 
+					Entry[] entrys = propertyDefinition.getMap();
+					if(entrys != null && entrys.length > 0){
+						Map map = new HashMap();
+						for(Entry entry : entrys) map.put(entry.key(),entry.value());
+						value = map;
+					}
+				}
+				
+				if(value != null){
+					Class<?> fieldType = clazz.getDeclaredField(fieldName).getType();
+					Method method = clazz.getDeclaredMethod("set"+StringUtils.firstToUpperCase(fieldName),fieldType);
+					if(valueFlag){
+						if(StringUtils.includeProperty(strValue)){
+							strValue = ApplicationProperties.properties.get(StringUtils.propertyKey(strValue));
+							value = ClassUtil.parseValue(strValue, fieldType);
+						}
+						else{
+							value = ClassUtil.parseValue(strValue, fieldType);
+						}
+					}
+					method.invoke(beanObject, value);
+				}
+				
 			}
-		}catch(Exception e){
-			throw new BeanInitializeException(e);
 		}
-		return beanObject;
 	}
 	
 	public void setterBeanAnnotation(Object beanObject,Field[] fields){
@@ -245,7 +294,7 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 				Object bean = beans.get(name);
 				
 				if(bean == null){
-					bean = findContextBean(fieldType);
+					bean = findContextBean(fieldType,name);
 				}
 				
 				if(bean == null){
@@ -285,7 +334,7 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		}
 	}
 	
-	public Object findContextBean(Class<?> fieldType){
+	public Object findContextBean(Class<?> fieldType,String fieldName){
 		/**
 		 * 从已经实例化的Bean中找对应类型
 		 */
@@ -295,9 +344,9 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		 * 从基本注解Bean中找类型匹配的Bean
 		 */
 		if(bean == null){
-			Class<?> fieldClass = findContextClasss(fieldType);
-			if(fieldClass != null){
-				bean = createBean(fieldClass);
+			BeanDefinition beanDefinition = beanDefinitions.get(fieldName);
+			if(beanDefinition != null){
+				bean = createBean(fieldName,beanDefinition);
 			}
 		}
 		return bean;
@@ -352,43 +401,19 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 		return beanObject;
 	}
 	
-	public Class<?> findContextClasss(Class<?> type){
-		boolean isInterface = type.isInterface();
-		for (Class<?>  clazz : annotationClasss) {
-			if(isInterface){
-				Class<?>[] interfaces = clazz.getInterfaces();
-				if(interfaces != null){
-					for (Class<?> interf : interfaces) {
-						if(type == interf){
-							return clazz;
-						}
-					}
+	public boolean isContextAnnotation(Class<?> clazz){
+		for(Class<?> annot : contextAnnotation){
+			Annotation[] annots = clazz.getAnnotations();
+			for (Annotation annotation : annots) {
+				if(annotation.annotationType() == annot){
+					return true;
 				}
 			}
-			else if(clazz == type){
-				return clazz;
-			}
 		}
-		return null;
-	}
-	
-	public boolean isContextAnnotation(Class<?> clazz){
-		return clazz.getAnnotation(Component.class) != null ||
-			   clazz.getAnnotation(Interceptor.class) != null ||
-		       clazz.getAnnotation(Action.class) != null ||
-		       clazz.getAnnotation(Service.class) != null ||
-		       clazz.getAnnotation(Dao.class) != null || 
-		       clazz.getAnnotation(Beans.class) != null;
+		return false;
 	}
 	
 	public void extendCreateBean(Object beanObject)throws Exception{
-		/**
-		 * 辅助为bean设置上下文FactoryBean
-		 */
-		if(beanObject instanceof FactoryBeanAware){
-			((FactoryBeanAware) beanObject ).setFactoryBean(this);
-		}
-		
 		/**
 		 * 调用其初始化bean方法
 		 */
@@ -406,6 +431,68 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 					method.invoke(beanObject, new Object[]{});
 					break;
 				}
+			}
+		}
+	}
+	
+	public void findRegisterAnnotationResole(){
+		Class<?> registerAnnotationClass = RegisterAnnotationResolve.class;
+		for(Map.Entry<String, BeanDefinition> entry : beanDefinitions.entrySet()){
+			BeanDefinition beanDefinition = entry.getValue();
+			Class<?> beanClazz = beanDefinition.getBeanClass();
+			Class<?>[] interfaces = beanClazz.getInterfaces();
+			boolean isRegisterAnnotaion = false;
+			for(Class<?> interfa : interfaces){
+				if(interfa == registerAnnotationClass){
+					isRegisterAnnotaion = true;
+					break;
+				}
+			}
+			
+			if(isRegisterAnnotaion){
+				Object resoleAnnotationObject = null; 
+				resoleAnnotationObject = createBean(beanDefinition.getBeanName(), beanDefinition);
+				
+				RegisterAnnotationResolve annotationResolve = ( (RegisterAnnotationResolve) resoleAnnotationObject);
+				Class<?> annotationClass = annotationResolve.getAnnotationClass();
+				if(annotationClass == null){
+					throw new BeanInitializeException("[Application Context] create annotation resole:"
+							+ " " + beanClazz + " getAnnotationClass is null ");
+				}
+				contextAnnotation.add(annotationClass );
+				registerAnnotationResoleMap.put(annotationClass ,annotationResolve);
+			}
+		}
+	}
+	
+	public void registerBeanPostProcessor(){
+		Map<Integer, Boolean> orderMap = new HashMap<Integer, Boolean>();
+		Class<?> beanPostProcessorClass = BeanPostProcessor.class;
+		for(Map.Entry<String, BeanDefinition> entry : beanDefinitions.entrySet()){
+			BeanDefinition beanDefinition = entry.getValue();
+			Class<?> beanClazz = beanDefinition.getBeanClass();
+			Class<?>[] interfaces = beanClazz.getInterfaces();
+			boolean isBeanPostProcessor = false;
+			for(Class<?> interfa : interfaces){
+				if(interfa == beanPostProcessorClass){
+					isBeanPostProcessor = true;
+					break;
+				}
+			}
+			
+			if(isBeanPostProcessor){
+				Object beanPostProcessorObj = null; 
+				beanPostProcessorObj = createBean(beanDefinition.getBeanName(), beanDefinition);
+				
+				BeanPostProcessor beanPostProcessor = ( (BeanPostProcessor) beanPostProcessorObj);
+				int order = beanPostProcessor.getOrder();
+				if(orderMap.containsKey(order)){
+					throw new BeanInitializeException("[Application Context] BeanPostProcessor "
+							+ " " + beanClazz + " order " + order + " exist ");
+				}
+				
+				orderMap.put(order, true);
+				beanPostProcessorList.add(new BeanPostProcessorChain(order, beanPostProcessor));
 			}
 		}
 	}

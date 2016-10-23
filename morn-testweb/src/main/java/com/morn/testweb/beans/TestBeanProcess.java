@@ -27,12 +27,14 @@ public class TestBeanProcess implements BeanPostProcessor,InitializingBean,Facto
 
 	public Object postProcessBeforeInitialization(Object bean, String beanName)
 			throws BeanInitializeException {
-		return null;
+		System.out.println(" TestBeanProcessor before beanName:" + beanName);
+		return bean;
 	}
 
 	public Object postProcessAfterInitialization(Object bean, String beanName)
 			throws BeanInitializeException {
-		return null;
+		System.out.println(" TestBeanProcessor after beanName:" + beanName);
+		return bean;
 	}
 
 	public void afterPropertiesSet() throws Exception {
@@ -46,6 +48,10 @@ public class TestBeanProcess implements BeanPostProcessor,InitializingBean,Facto
 	@InitMethod
 	public void init(){
 		System.out.println("TestBeanProcess.init()");
+	}
+
+	public int getOrder() {
+		return 1;
 	}
 
 }

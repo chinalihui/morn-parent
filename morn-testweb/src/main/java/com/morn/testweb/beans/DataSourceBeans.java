@@ -30,4 +30,12 @@ public abstract class DataSourceBeans {
 	})
 	BasicDataSource core_oracle_ds_rw;
 	
+	@Bean(propertys={
+			@Property(name="driverClassName",value="${oracle.driver}"),
+			@Property(name="url",value="${local.oracle.url}"),
+			@Property(name="username",value="${local.oracle.username}"),
+			@Property(name="password",value="${local.oracle.password}")
+	})
+	BasicDataSource local_dataSource;
+	
 }

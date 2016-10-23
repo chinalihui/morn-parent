@@ -29,6 +29,7 @@ import org.mornframework.context.beans.factory.BeanHolder;
 import org.mornframework.webmvc.annotation.RequestRoute;
 import org.mornframework.webmvc.annotation.ResponseJson;
 
+import com.morn.testweb.dao.IMenuDao;
 import com.morn.testweb.service.IAllService;
 import com.morn.testweb.service.impl.TestBean;
 
@@ -44,6 +45,9 @@ public class AllInfoAction {
 	
 	@Inject
 	private TestBean testBean;
+	
+	@Inject
+	private IMenuDao menuDao;
 	
 	@RequestRoute("/all")
 	public @ResponseJson Map<String, String> all(String name){
@@ -78,6 +82,13 @@ public class AllInfoAction {
 		System.out.println(testBean.getHosts());
 		System.out.println(testBean.getAbs());
 		System.out.println(testBean.getUser().getUserName() + "\t" + testBean.getUser().getAge());
+		return null;
+	}
+	
+	@RequestRoute("/menus")
+	public String menus(){
+		System.out.println("menuDao:" + menuDao);
+		menuDao.search();
 		return null;
 	}
 	

@@ -30,6 +30,14 @@ public class PropertyDefinition {
 	private Element[] list;
 	private Entry[] map;
 	
+	public PropertyDefinition(){}
+	
+	public PropertyDefinition(String name,String value,String ref){
+		this.name = name;
+		this.value = value;
+		this.ref = ref;
+	}
+	
 	public PropertyDefinition(String name, String value, String ref,
 			Element[] list, Entry[] map) {
 		super();

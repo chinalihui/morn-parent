@@ -31,6 +31,16 @@ public interface FactoryBean {
 	String SCOPE_PROTOTYPE = "prototype";
 	
 	/**
+	 * 表示Bean为注解实例化的
+	 */
+	int CONTEXT_BEAN_FLAG_ANNOS = 1;
+	
+	/**
+	 * 表示Bean为@Bean实例化的
+	 */
+	int CONTEXT_BEAN_FLAG_BEANS = 2;
+	
+	/**
 	 * @param name
 	 * @return
 	 */

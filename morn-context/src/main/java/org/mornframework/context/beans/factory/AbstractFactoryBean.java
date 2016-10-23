@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.mornframework.context.annotation.Scope;
@@ -26,7 +27,8 @@ import org.mornframework.context.beans.annotation.Bean;
 import org.mornframework.context.beans.annotation.Beans;
 import org.mornframework.context.beans.annotation.Property;
 import org.mornframework.context.beans.exception.BeanInitializeException;
-import org.mornframework.context.beans.extend.BeanPostProcessor;
+import org.mornframework.context.beans.extend.BeanPostProcessorChain;
+import org.mornframework.context.beans.extend.RegisterAnnotationResolve;
 import org.mornframework.context.util.ClassUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,12 +39,40 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractFactoryBean implements FactoryBean{
 	
+	/**
+	 * 上下文bean实例
+	 */
 	protected Map<String, Object> beans;
-	protected Map<String, Class<?>> prototypeClasses;
+	
+	/**
+	 * 上下文所有的class
+	 */
 	protected List<Class<?>> contextClasss;
-	protected List<Class<?>> annotationClasss;
+	
+	/**
+	 * 上下文中所有的bean对象描述
+	 */
 	protected Map<String,BeanDefinition> beanDefinitions;
-	protected List<BeanPostProcessor> beanPostProcessorList;
+	
+	/**
+	 * 上下文中所有BeanPostProcessr
+	 */
+	protected List<BeanPostProcessorChain> beanPostProcessorList;
+	
+	/**
+	 * 应用自定义注解扩展解释器
+	 */
+	protected Map<Class<?>, RegisterAnnotationResolve> registerAnnotationResoleMap;
+	
+	/**
+	 * 上下文中所有的注解类
+	 */
+	protected List<Class<?>> contextAnnotation;
+	
+	/**
+	 * 上下文中所有带注解的Class
+	 */
+	protected Set<Class<?>> annotationClasses;
 	protected final Logger LOG = LoggerFactory.getLogger(getClass());
 	
 	/**
@@ -61,8 +91,9 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 			if(pkg != null && pkg.length() > 0)
 				contextClasss.addAll(ClassUtil.getClasses(pkg));
 		}
-		
-		annotationClasss = new LinkedList<Class<?>>();
+	}
+	
+	public void resoleContextBeanConfig(){
 		for(Class<?> clazz : contextClasss){
 			if(isContextAnnotation(clazz)){
 				if(clazz.getAnnotation(Beans.class) != null){
@@ -71,7 +102,17 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 					}
 					processAnnotationBeans(clazz);
 				} else {
-					annotationClasss.add(clazz);
+					String beanName = getBeanName(clazz);
+					BeanDefinition beanDefinition = new BeanDefinition();
+					beanDefinition.setBeanName(beanName);
+					beanDefinition.setBeanClass(clazz);
+					beanDefinition.setBeanFlag(CONTEXT_BEAN_FLAG_ANNOS);
+					Scope scope = clazz.getAnnotation(Scope.class);
+					if(scope == null || SCOPE_SINGLETON.equals(scope.value())){
+						beanDefinition.setScope(SCOPE_SINGLETON);
+					}
+					beanDefinitions.put(beanName,beanDefinition);
+					annotationClasses.add(clazz);
 				}
 			}
 		}
@@ -83,9 +124,6 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 	 */
 	public Object getBean(String name){
 		Object object = beans.get(name);
-		if(object == null){
-			object = createBean(prototypeClasses.get(name));
-		}
 		
 		if(object == null){
 			BeanDefinition beanDefinition = beanDefinitions.get(name);
@@ -94,10 +132,6 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 			}
 		}
 		return object;
-	}
-	
-	public List<Class<?>> getAnnotationClasss(){
-		return annotationClasss;
 	}
 	
 	public boolean isSingleton(Class<?> clazz){
@@ -146,13 +180,23 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 					}
 				}
 				
-				BeanDefinition beanDefinition = new BeanDefinition(beanName, beanClass);
-				beanDefinition.setPropertys(propertyMap);
-				beanDefinition.setScope(bean.scope());
-				beanDefinition.setParent(bean.parent());
-				beanDefinitions.put(beanName, beanDefinition);
+				try{
+					BeanDefinition beanDefinition = new BeanDefinition(beanName, Class.forName(beanClass));
+					beanDefinition.setPropertys(propertyMap);
+					beanDefinition.setScope(bean.scope());
+					beanDefinition.setParent(bean.parent());
+					beanDefinition.setBeanFlag(CONTEXT_BEAN_FLAG_BEANS);
+					beanDefinitions.put(beanName, beanDefinition);
+				}
+				catch(Exception e){
+					e.printStackTrace();
+				}
 			}
 		}
+	}
+	
+	public Set<Class<?>> getAnnotationClasses(){
+		return annotationClasses;
 	}
 	
 	/**
@@ -173,13 +217,6 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 	 * @return
 	 */
 	public abstract String getBeanName(Class<?> clazz);
-	
-	/**
-	 * 通过框架中的原始注解创建
-	 * @param clazz
-	 * @return
-	 */
-	public abstract Object createBean(Class<?> clazz);
 	
 	/**
 	 * 创建bean

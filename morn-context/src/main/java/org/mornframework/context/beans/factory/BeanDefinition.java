@@ -14,6 +14,7 @@
 
 package org.mornframework.context.beans.factory;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -25,17 +26,45 @@ public class BeanDefinition {
 	
 	public BeanDefinition(){}
 	
-	public BeanDefinition(String beanName,String beanClass){
+	public BeanDefinition(String beanName,Class<?> beanClass){
 		this.beanName = beanName;
 		this.beanClass = beanClass;
 	}
 	
+	/**
+	 * bean alias
+	 */
 	private String beanName;
-	private String beanClass;
+	
+	/**
+	 * bean class
+	 */
+	private Class<?> beanClass;
+	
+	/**
+	 * bean scope
+	 */
 	private String scope;
+	
+	/**
+	 * bean parent
+	 */
 	private String parent;
-	private Map<String, PropertyDefinition> propertys;
+	
+	/**
+	 * bean propertys
+	 */
+	private Map<String, PropertyDefinition> propertys = new HashMap<String, PropertyDefinition>();
+	
+	/**
+	 * remark
+	 */
 	private String remark;
+	
+	/**
+	 * bean flag: 1(@Annotation type),2(@Bean)
+	 */
+	private int beanFlag;
 	
 	public String getBeanName() {
 		return beanName;
@@ -43,12 +72,22 @@ public class BeanDefinition {
 	public void setBeanName(String beanName) {
 		this.beanName = beanName;
 	}
-	public String getBeanClass() {
+	public Class<?> getBeanClass() {
 		return beanClass;
 	}
-	public void setBeanClass(String beanClass) {
+
+	public void setBeanClass(Class<?> beanClass) {
 		this.beanClass = beanClass;
 	}
+
+	public int getBeanFlag() {
+		return beanFlag;
+	}
+
+	public void setBeanFlag(int beanFlag) {
+		this.beanFlag = beanFlag;
+	}
+
 	public String getScope() {
 		return scope;
 	}
