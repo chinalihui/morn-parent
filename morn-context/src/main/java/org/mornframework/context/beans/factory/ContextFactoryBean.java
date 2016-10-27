@@ -54,7 +54,7 @@ import org.mornframework.context.util.StringUtils;
 public class ContextFactoryBean extends AbstractFactoryBean{
 
 	@SuppressWarnings("serial")
-	public ContextFactoryBean(String basePackage){
+	public ContextFactoryBean(String basePackage,String propertiesPath){
 		beans = new LinkedHashMap<String, Object>();
 		beanDefinitions = new HashMap<String, BeanDefinition>();
 		beanPostProcessorList = new ArrayList<BeanPostProcessorChain>();
@@ -68,6 +68,11 @@ public class ContextFactoryBean extends AbstractFactoryBean{
 			add(Beans.class);
 			add(Interceptor.class);
 		}};
+		
+		/**
+		 * 初始化加载属性文件
+		 */
+		initProperties(propertiesPath);
 		
 		/**
 		 * 根据web.xml指定的package扫描Class

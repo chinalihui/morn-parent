@@ -13,8 +13,6 @@
 */
 package org.mornframework.webmvc.context;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -22,7 +20,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 
 import javassist.ClassClassPath;
@@ -41,7 +38,6 @@ import org.mornframework.context.annotation.Action;
 import org.mornframework.context.annotation.Interceptor;
 import org.mornframework.context.beans.factory.AbstractFactoryBean;
 import org.mornframework.context.beans.factory.ContextFactoryBean;
-import org.mornframework.context.support.ApplicationProperties;
 import org.mornframework.context.util.StringUtils;
 import org.mornframework.webmvc.annotation.RequestRoute;
 import org.mornframework.webmvc.handler.ActionHandler;
@@ -79,7 +75,6 @@ public class MornWebApplicationContext implements MornApplication{
 		this.filterConfig = filterConfig;
 		this.scanPackage = scanPackage;
 		
-		initProperties();
 		initFactoryBean();
 		initInterceptor();
 		initWebAction();
@@ -203,32 +198,9 @@ public class MornWebApplicationContext implements MornApplication{
 	
 	public void initFactoryBean(){
 		LOG.info("init Web Application Context ");
-		factoryBean = new ContextFactoryBean(scanPackage);
+		factoryBean = new ContextFactoryBean(scanPackage,filterConfig.getInitParameter("contextProperties"));
 		factoryBean.createContextBeans();
 		classList = factoryBean.getAnnotationClasses();
-	}
-	
-	public void initProperties(){
-		String contextProperties = filterConfig.getInitParameter("contextProperties");
-		if(StringUtils.isEmpty(contextProperties)){
-			return;
-		}
-		String[] paths = contextProperties.split(",");
-		for(String path : paths){
-			InputStream in = this.getClass().getResourceAsStream(path.trim());
-			Properties prop = new Properties();
-			try {
-				if(in != null){
-					prop.load(in);
-					Set<String> keys = prop.stringPropertyNames();
-					for(String key : keys){
-						ApplicationProperties.properties.put(key, prop.getProperty(key));
-					}
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
 	}
 	
 	public List<ActionInterceptor> getUriInterceptor(String uri){

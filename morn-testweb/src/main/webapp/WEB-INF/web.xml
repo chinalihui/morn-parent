@@ -13,12 +13,6 @@
 			<param-name>scanPackage</param-name>
 			<param-value>com.morn</param-value>
 		</init-param>
-		<init-param>
-			<param-name>contextProperties</param-name>
-			<param-value>
-				/application.properties
-			</param-value>
-		</init-param>
 	</filter>
 	<filter-mapping>
 		<filter-name>mornMvc</filter-name>

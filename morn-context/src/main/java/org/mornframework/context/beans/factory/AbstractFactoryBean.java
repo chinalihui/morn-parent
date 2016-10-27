@@ -14,11 +14,14 @@
 
 package org.mornframework.context.beans.factory;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
@@ -29,6 +32,7 @@ import org.mornframework.context.beans.annotation.Property;
 import org.mornframework.context.beans.exception.BeanInitializeException;
 import org.mornframework.context.beans.extend.BeanPostProcessorChain;
 import org.mornframework.context.beans.extend.RegisterAnnotationResolve;
+import org.mornframework.context.support.ApplicationProperties;
 import org.mornframework.context.util.ClassUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,6 +77,13 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 	 * 上下文中所有带注解的Class
 	 */
 	protected Set<Class<?>> annotationClasses;
+	
+	/**
+	 * 默认加载属性文件
+	 */
+	protected String PROPERTIES_JDBC_PATH = "jdbc.properties";
+	protected String PROPERTIES_SYSTEM_PATH = "system.properties";
+	protected String PROPERTIES_INFO_PATH = "info.properties";
 	protected final Logger LOG = LoggerFactory.getLogger(getClass());
 	
 	/**
@@ -192,6 +203,36 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 					e.printStackTrace();
 				}
 			}
+		}
+	}
+	
+	public void loadPropertiesToMap(InputStream in){
+		if(in != null){
+			Properties prop = new Properties();
+			try {
+				prop.load(in);
+				Set<String> keys = prop.stringPropertyNames();
+				for(String key : keys)
+					ApplicationProperties.properties.put(key, prop.getProperty(key));
+				prop.clone();
+				in.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	public void initProperties(String propertiesPath){
+		loadPropertiesToMap(this.getClass().getResourceAsStream("/" + PROPERTIES_SYSTEM_PATH));
+		loadPropertiesToMap(this.getClass().getResourceAsStream("/" + PROPERTIES_JDBC_PATH));
+		loadPropertiesToMap(this.getClass().getResourceAsStream("/" + PROPERTIES_INFO_PATH));
+		
+		if(StringUtils.isEmpty(propertiesPath)){
+			return;
+		}
+		String[] paths = propertiesPath.split(",");
+		for(String path : paths){
+			loadPropertiesToMap(this.getClass().getResourceAsStream(path.trim()));
 		}
 	}
 	
