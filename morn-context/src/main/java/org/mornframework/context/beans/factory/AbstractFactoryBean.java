@@ -223,8 +223,11 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 	}
 	
 	public void initProperties(String propertiesPath){
+		LOG.info("[Application Context] Init load Properties file name:/" + PROPERTIES_SYSTEM_PATH);
 		loadPropertiesToMap(this.getClass().getResourceAsStream("/" + PROPERTIES_SYSTEM_PATH));
+		LOG.info("[Application Context] Init load Properties file name:/" + PROPERTIES_JDBC_PATH);
 		loadPropertiesToMap(this.getClass().getResourceAsStream("/" + PROPERTIES_JDBC_PATH));
+		LOG.info("[Application Context] Init load Properties file name:/" + PROPERTIES_INFO_PATH);
 		loadPropertiesToMap(this.getClass().getResourceAsStream("/" + PROPERTIES_INFO_PATH));
 		
 		if(StringUtils.isEmpty(propertiesPath)){
@@ -232,6 +235,7 @@ public abstract class AbstractFactoryBean implements FactoryBean{
 		}
 		String[] paths = propertiesPath.split(",");
 		for(String path : paths){
+			LOG.info("[Application Context] Init load Properties file name:" + path.trim());
 			loadPropertiesToMap(this.getClass().getResourceAsStream(path.trim()));
 		}
 	}
