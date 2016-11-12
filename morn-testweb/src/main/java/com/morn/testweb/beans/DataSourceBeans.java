@@ -40,4 +40,12 @@ public abstract class DataSourceBeans {
 	})
 	BasicDataSource local_dataSource;
 	
+	@Bean(propertys={
+			@Property(name="driverClassName",value="${mysql.driver}"),
+			@Property(name="url",value="${mysql.url}"),
+			@Property(name="username",value="${mysql.username}"),
+			@Property(name="password",value="${mysql.password}")
+	})
+	BasicDataSource mysql_dataSource;
+	
 }

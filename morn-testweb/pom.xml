@@ -50,6 +50,24 @@
 			<version>10.2.0.4.0</version>
 		</dependency>
 		
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>fastjson</artifactId>
+			<version>1.1.36</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<version>5.1.25</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.mybatis</groupId>
+			<artifactId>mybatis</artifactId>
+			<version>3.2.8</version>
+		</dependency>
+		
         <dependency>
 			<groupId>org.mornframework</groupId>
 			<artifactId>morn-context</artifactId>
@@ -59,6 +77,12 @@
 		<dependency>
 			<groupId>org.mornframework</groupId>
 			<artifactId>morn-webmvc</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.mornframework</groupId>
+			<artifactId>morn-orm-mybatis</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 		

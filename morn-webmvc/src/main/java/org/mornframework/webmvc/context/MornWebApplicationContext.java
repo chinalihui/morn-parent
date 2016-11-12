@@ -40,7 +40,7 @@ import org.mornframework.context.annotation.Action;
 import org.mornframework.context.annotation.Interceptor;
 import org.mornframework.context.beans.factory.AbstractFactoryBean;
 import org.mornframework.context.beans.factory.ContextFactoryBean;
-import org.mornframework.context.util.StringUtils;
+import org.mornframework.core.util.StringUtils;
 import org.mornframework.webmvc.annotation.RequestRoute;
 import org.mornframework.webmvc.handler.ActionHandler;
 import org.mornframework.webmvc.handler.Handler;

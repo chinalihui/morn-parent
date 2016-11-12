@@ -28,7 +28,7 @@ import org.mornframework.context.annotation.Value;
 import org.mornframework.context.beans.factory.AbstractFactoryBean;
 import org.mornframework.context.support.ApplicationProperties;
 import org.mornframework.context.util.ClassUtil;
-import org.mornframework.context.util.StringUtils;
+import org.mornframework.core.util.StringUtils;
 import org.mornframework.webmvc.annotation.ResponseJson;
 import org.mornframework.webmvc.exception.ServletRequestException;
 import org.mornframework.webmvc.output.ErrorOutput;

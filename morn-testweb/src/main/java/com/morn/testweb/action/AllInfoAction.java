@@ -19,7 +19,9 @@ package com.morn.testweb.action;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.sql.DataSource;
@@ -32,6 +34,9 @@ import org.mornframework.webmvc.annotation.RequestRoute;
 import org.mornframework.webmvc.annotation.ResponseJson;
 
 import com.morn.testweb.dao.IMenuDao;
+import com.morn.testweb.dao.StationUserInfoDao;
+import com.morn.testweb.dao.UserDao;
+import com.morn.testweb.domain.User;
 import com.morn.testweb.service.IAllService;
 import com.morn.testweb.service.impl.TestBean;
 
@@ -50,6 +55,12 @@ public class AllInfoAction {
 	
 	@Inject
 	private IMenuDao menuDao;
+	
+	@Inject
+	private UserDao userDao;
+	
+	@Inject
+	private StationUserInfoDao stationUserInfoDao;
 	
 	@RequestRoute("/all")
 	public @ResponseJson Map<String, String> all(String name){
@@ -92,6 +103,32 @@ public class AllInfoAction {
 		System.out.println("menuDao:" + menuDao);
 		menuDao.search();
 		return null;
+	}
+	
+	@RequestRoute("/userInfo")
+	@ResponseJson
+	public List<User> getUserInfo(String id){
+		List<User> list = new ArrayList<User>();
+		list.add(userDao.findById(id));
+		list.add(stationUserInfoDao.findById(id));
+		return list;
+	}
+	
+	@RequestRoute("/insertInfo")
+	@ResponseJson
+	public int insertInfo(String userName,String address){
+		User user = new User();
+		user.setUserName(userName);
+		user.setAddress(address);
+		return stationUserInfoDao.insertInfo(user);
+	}
+	
+	@RequestRoute("/userAll")
+	@ResponseJson
+	public List<User> searchAll(String order){
+		Map<String, Object> param = new HashMap<String, Object>();
+		param.put("order", order);
+		return stationUserInfoDao.selectAll(param);
 	}
 	
 }
